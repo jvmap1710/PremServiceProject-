@@ -1,0 +1,302 @@
+datasource db {
+  provider = "sqlserver"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique // Mã khách hàng (e.g., GT, SCB)
+  isActive  Boolean  @default(true)
+  
+  picName   String?  // Tên người liên hệ (PIC)
+  picContact String? // Liên hệ PIC (SĐT/Email)
+  address    String?  @db.NVarChar(Max) // Địa chỉ
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  packages  PremiumPackage[]
+  requests  ServiceRequest[]
+
+  ownerId   String?
+  owner     User?    @relation("ClientOwner", fields: [ownerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
+  @@map("Clients")
+}
+
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String?  // Email để nhận thông báo
+  password  String
+  name      String
+  role      String   @default("TAS") // ADMIN, TAS, DEV
+  salary    Float?   @default(0) // Lương tháng (VNĐ)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedRequests ServiceRequest[] @relation("Assignee")
+  createdRequests  ServiceRequest[] @relation("Creator")
+  ownedClients     Client[]         @relation("ClientOwner")
+  workLogs         WorkLog[]
+  attachments      Attachment[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]   @relation("UserNotifications")
+
+  @@map("Users")
+
+}
+
+model PremiumPackage {
+  id          String   @id @default(cuid())
+  name        String
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  validFrom   DateTime
+  validTo     DateTime
+  isActive    Boolean  @default(true)
+  monthlyQuota Int     @default(0) // Tổng số giờ định mức mỗi tháng
+  monthlyPrice Float   @default(0) // Giá gói mỗi tháng (VNĐ)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sroRules    SRORule[]
+  requests    ServiceRequest[]
+
+  @@map("PremiumPackages")
+}
+
+model SRORule {
+  id              String         @id @default(cuid())
+  packageId       String
+  package         PremiumPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  
+  taskName        String         // Tên nghiệp vụ (e.g., Update Content, Fix Bug)
+  estimateHours   Float          // Số giờ quy đổi (e.g., 0.5, 1.0)
+  requestsPerMonth Int           @default(1) // Số lần yêu cầu định mức mỗi tháng
+  scope           String?        @db.NVarChar(Max) // Phạm vi
+  exclusions      String?        @db.NVarChar(Max) // Ngoại trừ
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  requestItems    ServiceRequestItem[]
+
+  @@map("SRORules")
+}
+
+model ServiceRequest {
+  id             String         @id @default(cuid())
+  code           String         @unique // Mã tự sinh (e.g., PREM-GT-001)
+  
+  clientId       String
+  client         Client         @relation(fields: [clientId], references: [id], onUpdate: NoAction)
+  
+  packageId      String
+  package        PremiumPackage @relation(fields: [packageId], references: [id], onUpdate: NoAction)
+  
+  items          ServiceRequestItem[]
+  subTasks       SubTask[]
+  
+  title          String         // Tiêu đề ngắn
+  userRequirement String?        @db.Text // Yêu cầu từ phía khách hàng (Nghiệp vụ)
+  description    String         @db.Text // Mô tả kỹ thuật chi tiết (Technical)
+  status         String    @default("TODO") // TODO, IN_PROGRESS, DONE
+  type           String    @default("TASK") // TASK, BUG, FEATURE, URGENT
+  priority       String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  deadline       DateTime?
+  assigneeId     String?   // User ID or name
+  assignee       User?     @relation("Assignee", fields: [assigneeId], references: [id], onUpdate: NoAction)
+  
+  createdById    String?
+  creator        User?     @relation("Creator", fields: [createdById], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  
+  raiseDate      DateTime  @default(now())
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  comments       Comment[]
+  workLogs       WorkLog[]
+  attachments    Attachment[]
+  auditLogs      AuditLog[]
+  @@map("ServiceRequests")
+}
+
+model ServiceRequestItem {
+  id           String         @id @default(cuid())
+  requestId    String
+  request      ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  sroRuleId    String
+  sroRule      SRORule        @relation(fields: [sroRuleId], references: [id], onUpdate: NoAction)
+  
+  note         String?        // Ghi chú riêng cho item này
+  quantity     Int            @default(1) // Số lượng SRO cùng loại trong 1 request
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  workLogs     WorkLog[]
+
+  @@map("ServiceRequestItems")
+}
+
+model SubTask {
+  id          String   @id @default(cuid())
+  requestId   String
+  request     ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  content     String   @db.NVarChar(Max) // Tiêu đề/Nội dung chính
+  description String?  @db.NVarChar(Max) // Mô tả chi tiết cho Dev
+  status      String   @default("TODO") // TODO, IN_PROGRESS, DONE
+  isDone      Boolean  @default(false)
+  workLogs    WorkLog[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("SubTasks")
+}
+
+model Comment {
+  id          String   @id @default(cuid())
+  requestId   String
+  request     ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  content     String   @db.NVarChar(Max)
+  authorName  String   // Tên người bình luận
+  userEmail   String?  // Email người bình luận (dùng để lọc thông báo)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("Comments")
+}
+
+model Board {
+  id          String   @id @default(cuid())
+  name        String
+  icon        String   @default("LayoutGrid")
+  filterType  String?  // TASK, BUG, etc.
+  filterClient String? // Client ID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("Boards")
+}
+
+model KanbanColumn {
+  id        String   @id @default(cuid())
+  title     String   // Tên hiển thị (vd: Cần làm)
+  statusKey String   @unique // Mã trạng thái (vd: TODO)
+  color     String   @default("#94a3b8") // Màu sắc của cột
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("KanbanColumns")
+}
+
+model EmailSetting {
+  id          String   @id @default("SYSTEM_CONFIG")
+  host        String   // SMTP Server (e.g., smtp.gmail.com)
+  port        Int      @default(587)
+  secure      Boolean  @default(false)
+  user        String   // Username/Email
+  password    String   // SMTP Password (App Password)
+  fromEmail   String   // Email gửi đi
+  fromName    String   // Tên hiển thị người gửi
+  
+  updatedAt   DateTime @updatedAt
+
+  @@map("EmailSettings")
+}
+
+model WorkLog {
+  id          String   @id @default(cuid())
+  requestId   String
+  request     ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  subTaskId   String?
+  subTask     SubTask? @relation(fields: [subTaskId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
+  serviceRequestItemId String?
+  serviceRequestItem   ServiceRequestItem? @relation(fields: [serviceRequestItemId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  
+  hours       Float
+  description String?  @db.NVarChar(Max)
+  logDate     DateTime @default(now())
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("WorkLogs")
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  filename  String
+  url       String
+  fileType  String?
+  size      Int?
+  data      Bytes?   @db.VarBinary(Max)
+  
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  
+  createdAt DateTime @default(now())
+
+  @@map("Attachments")
+}
+ 
+model AuditLog {
+  id        String   @id @default(cuid())
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  
+  action    String   // e.g., "UPLOAD_EVIDENCE", "DELETE_EVIDENCE", "UPDATE_STATUS", "UPDATE_INFO"
+  details   String?  @db.NVarChar(Max) // JSON or text description of the change
+  
+  createdAt DateTime @default(now())
+ 
+  @@map("AuditLogs")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   // Người nhận thông báo
+  user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  message   String   @db.NVarChar(Max)
+  type      String   // e.g., "ASSIGNMENT", "STATUS_CHANGE", "COMMENT"
+  link      String?  // Đường dẫn tới request/task liên quan
+  isRead    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+
+  @@map("Notifications")
+}
+
+model GlobalSettings {
+  id                    String   @id @default("system")
+  standardMonthlyHours  Int      @default(176)
+  revenueMode           String   @default("PACKAGE") // PACKAGE or SRO_HOURS
+  revenuePerSroHour     Float    @default(0)
+  
+  updatedAt             DateTime @updatedAt
+
+  @@map("GlobalSettings")
+}

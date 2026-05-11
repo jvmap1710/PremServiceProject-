@@ -1,0 +1,72 @@
+export const STANDARD_REQUESTS = [
+  {
+    taskName: "Edit existing Classes",
+    scope: "FUJIFILM Business Innovation Vietnam (FBVN) will re-structure/re-configure and/or assist editing existing Classes as defined in <Annex D>\n- Add new Properties\n- Edit Properties’ information",
+    exclusions: "- Changes that caused error to running workflow(s) and/or configuration in Compliance Kit application\n- Configure for Properties’ Automatic Value",
+    estimateHours: 2,
+    requestsPerMonth: 5,
+  },
+  {
+    taskName: "Add new Classes/ Objects",
+    scope: "FBVN will create and/or assist to create new Objects/Classes. Each newly created Class should be included within 15 Properties",
+    exclusions: "- Configure for Properties’ Automatic Value",
+    estimateHours: 2,
+    requestsPerMonth: 5,
+  },
+  {
+    taskName: "Auto-calculated Properties Value",
+    scope: "FBVN will configure and/or assist to configure the Automatic Value of Property as M-FILES’ standard feature, included:\n- Simple Automatic Numbering\n- Customized Automatic Numbering (VbScript)\n- Simple Concatenating of Properties\n- Calculated Value (VbScript)",
+    exclusions: "- Changes that caused error to running workflow(s) and/or configuration in Compliance Kit application\n- Variable’ values which are captured from another objects/ workflow states, and/or requires function that not in standard of M-FILES",
+    estimateHours: 8,
+    requestsPerMonth: 2,
+  },
+  {
+    taskName: "Edit existing Workflows",
+    scope: "FBVN will re-structure/re-configure and/or assist editing existing Workflows as defined in Annex D, includes:\n- Workflow’ states, transition\n- Permission\n- Notification\n- Set Properties\n- Convert to PDF format\n- Assignment\n- Post/Pre-Condition",
+    exclusions: "- Changes that caused error to running workflow(s) and/or configuration in Compliance Kit application\n- Configure Post/Pre-Condition (VbScript), & VbScript in Workflows [Action]",
+    estimateHours: 8,
+    requestsPerMonth: 2,
+  },
+  {
+    taskName: "Add new Workflows",
+    scope: "FBVN will create and/or assist to create new Workflows. Each newly created Workflow should be included within 12 States",
+    exclusions: "- Changes that caused error to running workflow(s) and/or configuration in Compliance Kit application\n- Configure VbScript in Workflows [Action] & Post/Pre-Condition (VbScript) that requires more than 03 logical functions/ procedures (calculations, conditionals,…), and/or requires value input/output from/to more than 03 properties/classes",
+    estimateHours: 15,
+    requestsPerMonth: 1,
+  },
+  {
+    taskName: "Edit existing Access Control Lists (ACLs)",
+    scope: "FBVN will re-structure/re-configure and/or assist editing existing ACL(s) as defined in Annex D",
+    exclusions: "- Changes that caused error to running workflow(s) and/or configuration in Compliance Kit application",
+    estimateHours: 2,
+    requestsPerMonth: 2,
+  },
+  {
+    taskName: "Add new Access Control Lists (ACLs)",
+    scope: "FBVN will create and/or assist to create new ACLs. Each newly created ACL should be included within 10 Users/Groups",
+    exclusions: "",
+    estimateHours: 2,
+    requestsPerMonth: 2,
+  },
+  {
+    taskName: "Migrate M-Files system",
+    scope: "FBVN will assist to migrate the M-Files system to new infrastructure; and support to investigate the problem from M-Files (if any) in migration activity.",
+    exclusions: "All errors are from hardware/outside M-Files system",
+    estimateHours: 8,
+    requestsPerMonth: 1,
+  },
+  {
+    taskName: "M-Files - Salesforce integration maintenance",
+    scope: "FBVN will assist to configure and maintain the integration between M-FILES & Salesforce system.",
+    exclusions: "All errors are from Salesforce system",
+    estimateHours: 4,
+    requestsPerMonth: 1,
+  },
+  {
+    taskName: "User & Admin training",
+    scope: "FBVN will deliver the training session of how to use M-FILES Standard features and Workflow operation as listed in Annex D",
+    exclusions: "- Onsite training",
+    estimateHours: 1,
+    requestsPerMonth: 2,
+  }
+];
