@@ -62,5 +62,10 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     orderBy: { name: 'asc' }
   });
 
-  return <RequestDetailView request={request} clients={clients} users={users} />;
+  // Lấy danh sách cột Kanban để hiển thị status
+  const kanbanColumns = await prisma.kanbanColumn.findMany({
+    orderBy: { order: 'asc' }
+  });
+
+  return <RequestDetailView request={request} clients={clients} users={users} kanbanColumns={kanbanColumns} />;
 }

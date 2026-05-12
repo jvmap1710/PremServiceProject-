@@ -155,8 +155,6 @@ export function KanbanBoard({
   };
 
   const handleDeleteColumn = async (id: string, statusKey: string) => {
-    console.log("DEBUG - handleDeleteColumn triggered:", { id, statusKey });
-    
     if (["TODO", "IN_PROGRESS", "DONE"].includes(statusKey.toUpperCase())) {
       toast.error("Không thể xóa các cột mặc định");
       return;
@@ -179,8 +177,6 @@ export function KanbanBoard({
       } else if (confirmName !== null) {
         toast.error("Tên xác nhận không chính xác");
       }
-    } else {
-      console.log("DEBUG - Deletion cancelled by user");
     }
   };
 
@@ -562,6 +558,7 @@ export function KanbanBoard({
             users={users}
             isModal={true}
             onSaved={handleRequestSaved}
+            kanbanColumns={columns}
           />
         )}
       </Modal>

@@ -67,7 +67,6 @@ export function KanbanColumn({
                   <button 
                     onClick={(e) => { 
                       e.stopPropagation(); 
-                      console.log("DEBUG - Delete button clicked for:", statusKey);
                       onDeleteClick?.(); 
                     }}
                     className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full hover:scale-110 transition-all"

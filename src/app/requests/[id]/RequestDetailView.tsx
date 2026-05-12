@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import Link from "next/link";
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 
 import { useSession } from "next-auth/react";
 import { createSubTask, updateSubTask, deleteSubTask } from "@/actions/subtask";
@@ -145,13 +145,15 @@ export function RequestDetailView({
   clients,
   users = [],
   isModal = false,
-  onSaved
+  onSaved,
+  kanbanColumns = []
 }: { 
   request: ServiceRequest, 
   clients: Client[],
   users?: User[],
   isModal?: boolean,
-  onSaved?: (updatedRequest: ServiceRequest) => void
+  onSaved?: (updatedRequest: ServiceRequest) => void,
+  kanbanColumns?: any[]
 }) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -189,6 +191,7 @@ export function RequestDetailView({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeInfoTab, setActiveInfoTab] = useState<"DISCUSSION" | "EVIDENCE" | "AUDIT">("DISCUSSION");
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
  
   // Sync state when props change (after router.refresh)
   useEffect(() => {
@@ -240,6 +243,37 @@ export function RequestDetailView({
   }, [clients, request.packageId, request.package?.sroRules]);
 
 
+  const triggerAutoSave = async (field: string, value: string) => {
+    setIsSaving(true);
+    const formData = new FormData();
+    formData.append(field, value);
+    
+    // Always include clientId and packageId for consistency if needed by action
+    formData.append("clientId", request.clientId);
+    formData.append("packageId", request.packageId);
+
+    const result = await updateServiceRequest(request.id, formData);
+    if (result?.error) {
+      toast.error(result.error);
+    } else {
+      setHasChanges(false);
+      // Sync local snapshot for KanbanBoard
+      const updatedSnapshot = {
+        ...request,
+        title: field === "title" ? value : title,
+        userRequirement: field === "userRequirement" ? value : userRequirement,
+        description: field === "description" ? value : description,
+        type: field === "type" ? value : type,
+        priority: field === "priority" ? value : priority,
+        deadline: field === "deadline" ? (value ? new Date(value) : null) : (deadline ? new Date(deadline) : null),
+        assigneeId: field === "assigneeId" ? value : assigneeId,
+      };
+      onSaved?.(updatedSnapshot as any);
+      router.refresh();
+    }
+    setIsSaving(false);
+  };
+
   const handleFieldChange = (field: string, value: string) => {
     if (field === "title") setTitle(value);
     if (field === "userRequirement") setUserRequirement(value);
@@ -249,6 +283,19 @@ export function RequestDetailView({
     if (field === "deadline") setDeadline(value);
     if (field === "assigneeId") setAssigneeId(value);
     setHasChanges(true);
+
+    // Auto-save logic
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
+    if (["type", "priority", "deadline", "assigneeId"].includes(field)) {
+      // Immediate save for selects and dates
+      triggerAutoSave(field, value);
+    } else {
+      // Debounced save for text fields (1.5s)
+      saveTimeoutRef.current = setTimeout(() => {
+        triggerAutoSave(field, value);
+      }, 1500);
+    }
   };
 
   const handleSaveMainInfo = async () => {
@@ -447,7 +494,6 @@ export function RequestDetailView({
     
     setIsLoggingTas(true);
     try {
-      console.log("DEBUG - Calling logTasTime action...");
       const result = await logTasTime(request.id, hours, tasLogForm.description);
       if (result.success) {
         setTasLogForm({ hours: "", description: "" });
@@ -611,10 +657,23 @@ export function RequestDetailView({
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Yêu cầu dịch vụ</span>
              </div>
              <div className="flex items-center gap-2">
-                <select disabled={isReadOnly} value={request.status} onChange={(e) => handleStatusUpdate(e.target.value)} className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest outline-none border transition-all ${isReadOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} ${request.status === "TODO" ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700" : request.status === "IN_PROGRESS" ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"}`}>
-                   <option value="TODO">Cần làm</option>
-                   <option value="IN_PROGRESS">Đang xử lý</option>
-                   <option value="DONE">Hoàn thành</option>
+                <select 
+                  disabled={isReadOnly} 
+                  value={request.status} 
+                  onChange={(e) => handleStatusUpdate(e.target.value)} 
+                  className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest outline-none border transition-all ${isReadOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} ${request.status === "TODO" ? "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700" : request.status === "IN_PROGRESS" ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"}`}
+                >
+                   {kanbanColumns && kanbanColumns.length > 0 ? (
+                     kanbanColumns.map(col => (
+                       <option key={col.id} value={col.statusKey}>{col.title}</option>
+                     ))
+                   ) : (
+                     <>
+                       <option value="TODO">Cần làm</option>
+                       <option value="IN_PROGRESS">Đang xử lý</option>
+                       <option value="DONE">Hoàn thành</option>
+                     </>
+                   )}
                 </select>
                 <select disabled={isReadOnly} value={type} onChange={(e) => handleFieldChange("type", e.target.value)} className={`bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest outline-none border border-slate-100 dark:border-slate-700 transition-all ${isReadOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                    <option value="TASK">Công việc</option>
