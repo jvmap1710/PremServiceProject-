@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { LayoutGrid, Bug, Briefcase } from "lucide-react";
 import { getKanbanColumns } from "@/actions/kanban";
 
-export default async function BoardPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function BoardPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   
   const board = await prisma.board.findUnique({
     where: { id }
@@ -16,7 +16,7 @@ export default async function BoardPage({ params }: { params: { id: string } }) 
   // Fetch requests based on board filter
   const requests = await prisma.serviceRequest.findMany({
     where: {
-      type: board.filterType !== "ALL" ? board.filterType : undefined,
+      type: (board.filterType && board.filterType !== "ALL") ? board.filterType : undefined,
       clientId: board.filterClient || undefined
     },
     include: {

@@ -131,7 +131,8 @@ export function SROPerformanceTable({ data }: SROPerformanceTableProps) {
                   <div className="flex items-center gap-2">Giao (Tickets) <SortIcon column="ticketsAssigned" /></div>
                 </th>
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Dự toán (h)</th>
-                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Thực tế (h)</th>
+                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Thực thi (h)</th>
+                <th className="py-4 px-8 text-[10px] font-black text-indigo-400 uppercase tracking-widest text-center">Điều phối (h)</th>
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors text-center" onClick={() => requestSort('efficiency')}>
                   <div className="flex items-center justify-center gap-2">Hiệu suất (%) <SortIcon column="efficiency" /></div>
                 </th>
@@ -176,6 +177,7 @@ export function SROPerformanceTable({ data }: SROPerformanceTableProps) {
                   </td>
                   <td className="py-5 px-8 text-center text-sm font-bold text-slate-500">{item.estimate.toFixed(1)}h</td>
                   <td className="py-5 px-8 text-center text-sm font-bold text-slate-500">{item.actual.toFixed(1)}h</td>
+                  <td className="py-5 px-8 text-center text-sm font-bold text-indigo-600 dark:text-indigo-400">{item.overhead.toFixed(1)}h</td>
                   <td className="py-5 px-8 text-center">
                     {item.actual > 0 ? (
                       <div className="inline-flex flex-col items-center">

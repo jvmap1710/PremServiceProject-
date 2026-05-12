@@ -53,6 +53,28 @@ export default async function AdminPage() {
             </div>
           </Link>
 
+          {/* System Settings Card */}
+          <Link href="/admin/settings" className="group">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl dark:hover:shadow-indigo-900/20 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden h-full">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-500" />
+              
+              <div className="relative space-y-6">
+                <div className="w-14 h-14 bg-indigo-600 dark:bg-indigo-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-none">
+                  <Settings className="w-6 h-6 text-white" />
+                </div>
+                
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">System Settings</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Quản lý giờ công định mức, mô hình doanh thu và các tham số toàn cục.</p>
+                </div>
+
+                <div className="flex items-center gap-2 text-indigo-600 text-[10px] font-black uppercase tracking-widest">
+                  Configure Now <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
           {/* User Management Placeholder */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm opacity-60 grayscale cursor-not-allowed relative overflow-hidden h-full">
              <div className="relative space-y-6">

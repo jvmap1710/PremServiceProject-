@@ -2,8 +2,14 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 
 export async function createPremiumPackage(formData: FormData) {
+  const session = await auth();
+  if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
+    return { error: "Bạn không có quyền thực hiện hành động này" };
+  }
+
   const clientId = formData.get("clientId") as string;
   const name = formData.get("name") as string;
   const validFrom = formData.get("validFrom") as string;
@@ -79,6 +85,11 @@ export async function syncPackageStatuses(clientId?: string) {
 }
 
 export async function updatePremiumPackage(formData: FormData) {
+  const session = await auth();
+  if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
+    return { error: "Bạn không có quyền thực hiện hành động này" };
+  }
+
   const id = formData.get("id") as string;
   const clientId = formData.get("clientId") as string;
   const name = formData.get("name") as string;
@@ -117,6 +128,11 @@ export async function updatePremiumPackage(formData: FormData) {
 }
 
 export async function deletePremiumPackage(id: string, clientId: string) {
+  const session = await auth();
+  if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
+    return { error: "Bạn không có quyền thực hiện hành động này" };
+  }
+  
   try {
     await prisma.premiumPackage.delete({
       where: { id },
@@ -130,6 +146,11 @@ export async function deletePremiumPackage(id: string, clientId: string) {
 }
 
 export async function addSRORule(formData: FormData) {
+  const session = await auth();
+  if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
+    return { error: "Bạn không có quyền thực hiện hành động này" };
+  }
+
   const packageId = formData.get("packageId") as string;
   const taskName = formData.get("taskName") as string;
   const scope = formData.get("scope") as string | null;
@@ -183,6 +204,11 @@ export async function addSRORule(formData: FormData) {
 }
 
 export async function updateSRORule(formData: FormData) {
+  const session = await auth();
+  if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
+    return { error: "Bạn không có quyền thực hiện hành động này" };
+  }
+
   const id = formData.get("id") as string;
   const packageId = formData.get("packageId") as string;
   const taskName = formData.get("taskName") as string;
@@ -238,6 +264,11 @@ export async function updateSRORule(formData: FormData) {
 }
 
 export async function deleteSRORule(id: string, packageId: string) {
+  const session = await auth();
+  if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
+    return { error: "Bạn không có quyền thực hiện hành động này" };
+  }
+  
   try {
     const rule = await prisma.sRORule.findUnique({
       where: { id },

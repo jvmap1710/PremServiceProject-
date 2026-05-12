@@ -38,4 +38,10 @@ export const menuItems = [
     icon: Mail,
     roles: ["ADMIN"],
   },
+  {
+    title: "Cấu hình hệ thống",
+    href: "/admin/settings",
+    icon: Settings,
+    roles: ["ADMIN"],
+  },
 ];

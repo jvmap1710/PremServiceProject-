@@ -30,10 +30,15 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
 
   useEffect(() => {
     async function loadNotifications() {
-      const result = await getNotifications();
-      if (result.success && result.notifications) {
-        setNotifications(result.notifications);
-        setUnreadCount(result.notifications.filter((n: any) => !n.isRead).length);
+      try {
+        const result = await getNotifications();
+        if (result.success && result.notifications) {
+          setNotifications(result.notifications);
+          setUnreadCount(result.notifications.filter((n: any) => !n.isRead).length);
+        }
+      } catch (error) {
+        // Silent error for notification polling to avoid console noise during auth transitions
+        console.warn("Notifications currently unavailable (polling)");
       }
     }
     loadNotifications();

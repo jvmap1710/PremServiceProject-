@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
 import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears, format, addMonths, startOfDay, endOfDay, differenceInMonths } from "date-fns";
 import { syncPackageStatuses } from "./package";
 
@@ -14,6 +16,7 @@ export interface PerformanceItem {
   ticketsCreated: number;
   estimate: number;
   actual: number;
+  overhead: number; // Thêm cột giờ overhead
   efficiency: number;
   rating: number;
 }
@@ -266,7 +269,8 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
       ticketsAssigned: 0,
       ticketsCreated: 0,
       estimate: 0,
-      actual: 0
+      actual: 0,
+      overhead: 0
     };
   });
 
@@ -287,7 +291,12 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
     // 3. Ghi nhận thời gian thực tế (Dành cho bất kỳ ai tham gia log giờ)
     req.workLogs.forEach(log => {
       if (log.userId && performanceMap[log.userId]) {
-        performanceMap[log.userId].actual += log.hours;
+        const desc = log.description || "";
+        if (desc.includes("[ĐIỀU PHỐI]") || desc.includes("[COORDINATION]") || desc.includes("[TAS OVERHEAD]")) {
+          performanceMap[log.userId].overhead += log.hours;
+        } else {
+          performanceMap[log.userId].actual += log.hours;
+        }
       }
     });
   });

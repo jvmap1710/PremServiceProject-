@@ -2,9 +2,18 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { subTaskSchema } from "@/lib/validations";
 
 export async function createSubTask(requestId: string, content: string, description?: string) {
-  if (!content.trim()) return { error: "Nội dung không được để trống" };
+  const session = await auth();
+  if (!session) return { error: "Bạn cần đăng nhập để tạo sub-task" };
+
+  // 1. Zod Validation
+  const validation = subTaskSchema.safeParse({ requestId, content, description });
+  if (!validation.success) {
+    return { error: validation.error.issues[0].message };
+  }
 
   try {
     const subTask = await prisma.subTask.create({
@@ -24,7 +33,7 @@ export async function createSubTask(requestId: string, content: string, descript
   }
 }
 
-export async function updateSubTask(id: string, requestId: string, data: { content?: string, description?: string, status?: string }) {
+export async function updateSubTask(id: string, requestId: string, data: { content?: string, description?: string, status?: string, isDone?: boolean }) {
   try {
     await prisma.subTask.update({
       where: { id },

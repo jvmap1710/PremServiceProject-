@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
     // Optional: Compress image if it's an image type to save DB space
     if (fileType.startsWith("image/") && fileType !== "image/svg+xml") {
       try {
-        buffer = await sharp(buffer)
+        buffer = (await sharp(buffer)
           .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
           .jpeg({ quality: 80 })
-          .toBuffer();
+          .toBuffer()) as any;
         fileType = "image/jpeg"; // Standardize to jpeg after compression
       } catch (sharpError) {
         console.error("Compression failed, using original:", sharpError);
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         data: { url: `/api/evidence/${att.id}` }
       });
 
-      await tx.auditLog.create({
+      await (tx as any).auditLog.create({
         data: {
           requestId,
           userId: session.user?.id,

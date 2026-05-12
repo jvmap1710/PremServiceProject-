@@ -11,11 +11,12 @@ import { Modal } from "../ui/Modal";
 
 interface SidebarProps {
   role: string;
+  initialBoards?: any[];
 }
 
 export const SIDEBAR_TOGGLE_EVENT = "toggle-sidebar";
 
-export function Sidebar({ role }: SidebarProps) {
+export function Sidebar({ role, initialBoards = [] }: SidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);

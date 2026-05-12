@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { RequestDetailView } from "./RequestDetailView";
 
-export default async function RequestDetailPage({ params }: { params: { id: string } }) {
+export default async function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const request = await prisma.serviceRequest.findUnique({
@@ -11,7 +11,7 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
       client: true,
       package: true,
       assignee: { select: { id: true, name: true, role: true } },
-      creator: { select: { name: true } },
+      creator: { select: { id: true, name: true, role: true } },
       comments: {
         orderBy: { createdAt: 'desc' }
       },

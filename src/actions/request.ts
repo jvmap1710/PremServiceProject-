@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { createNotification } from "./notification";
 import { NotificationService } from "@/lib/notifications";
+import { requestSchema } from "@/lib/validations";
 
 
 /**
@@ -21,31 +22,34 @@ async function deactivateExpiredPackages() {
 export type SROItem = { sroRuleId: string; quantity: number };
 
 export async function createServiceRequest(formData: FormData) {
+  const session = await auth();
+  if (!session) return { error: "Bạn cần đăng nhập để tạo yêu cầu" };
+
   await deactivateExpiredPackages();
 
-  const clientId = formData.get("clientId") as string;
-  const packageId = formData.get("packageId") as string;
-  const title = formData.get("title") as string;
-  const userRequirement = formData.get("userRequirement") as string;
-  const description = formData.get("description") as string;
-  const status = formData.get("status") as string;
-  const type = formData.get("type") as string;
-  const priority = (formData.get("priority") as string) || "MEDIUM";
-  const deadline = formData.get("deadline") as string;
-  const assigneeId = formData.get("assigneeId") as string;
+  // 1. Extract and Parse data
+  const rawData = {
+    clientId: formData.get("clientId") as string,
+    packageId: formData.get("packageId") as string,
+    title: formData.get("title") as string,
+    userRequirement: formData.get("userRequirement") as string,
+    description: formData.get("description") as string,
+    type: formData.get("type") as string,
+    priority: formData.get("priority") as string,
+    deadline: formData.get("deadline") as string || null,
+    assigneeId: formData.get("assigneeId") as string || null,
+    items: JSON.parse(formData.get("sroItems") as string || "[]")
+  };
+
+  // 2. Zod Validation
+  const validation = requestSchema.safeParse(rawData);
+  if (!validation.success) {
+    return { error: validation.error.issues[0].message };
+  }
+
+  const { clientId, packageId, title, userRequirement, description, type, priority, deadline, assigneeId, items: sroItems } = validation.data;
+  const status = formData.get("status") as string || "TODO";
   const raiseDateStr = formData.get("raiseDate") as string;
-  const sroItemsJson = formData.get("sroItems") as string;
-
-  let sroItems: SROItem[] = [];
-  try {
-    sroItems = JSON.parse(sroItemsJson || "[]");
-  } catch (e) {
-    return { error: "Dữ liệu SRO không hợp lệ" };
-  }
-
-  if (!clientId || !packageId || !title || !description) {
-    return { error: "Vui lòng nhập đầy đủ thông tin yêu cầu" };
-  }
 
   try {
     const client = await prisma.client.findUnique({

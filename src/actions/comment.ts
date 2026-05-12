@@ -5,10 +5,19 @@ import { revalidatePath } from "next/cache";
 import { createNotification } from "./notification";
 import { auth } from "@/auth";
 import { NotificationService } from "@/lib/notifications";
+import { commentSchema } from "@/lib/validations";
 
 export async function addComment(requestId: string, content: string, authorName: string) {
   try {
     const session = await auth();
+    if (!session) return { error: "Bạn cần đăng nhập để bình luận" };
+
+    // 1. Zod Validation
+    const validation = commentSchema.safeParse({ requestId, content });
+    if (!validation.success) {
+      return { error: validation.error.issues[0].message };
+    }
+
     const comment = await prisma.comment.create({
       data: {
         requestId,

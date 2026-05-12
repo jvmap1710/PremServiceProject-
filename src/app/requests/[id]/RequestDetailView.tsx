@@ -18,14 +18,15 @@ import { getPackageUsage } from "@/actions/package";
 
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
-import { addWorkLog, deleteWorkLog, updateWorkLog } from "@/actions/worklog";
+import { addWorkLog, deleteWorkLog, updateWorkLog, logTasTime } from "@/actions/worklog";
 import { deleteAttachment } from "@/actions/attachment";
 import { getAuditLogs } from "@/actions/audit";
+import { toast } from "react-hot-toast";
 
 export interface SubTask {
   id: string;
   content: string;
-  description?: string;
+  description: string | null;
   isDone: boolean;
   status: string;
 }
@@ -34,32 +35,34 @@ export interface Comment {
   id: string;
   content: string;
   authorName: string;
-  userEmail?: string;
+  userEmail: string | null;
   createdAt: Date | string;
 }
 
 export interface WorkLog {
   id: string;
   hours: number;
-  description?: string;
-  subTaskId?: string;
-  serviceRequestItemId?: string;
-  userId?: string;
+  description: string | null;
+  subTaskId: string | null;
+  serviceRequestItemId: string | null;
+  userId: string | null;
   logDate: Date | string;
   serviceRequestItem?: {
     sroRule?: {
       taskName: string;
     };
-  };
+  } | null;
+  user?: { name: string } | null;
 }
 
 export interface Attachment {
   id: string;
   filename: string;
   url: string;
-  fileType?: string;
-  size?: number;
+  fileType: string | null;
+  size: number | null;
   createdAt: Date | string;
+  user?: { name: string } | null;
 }
 
 export interface Package {
@@ -72,30 +75,33 @@ export interface ServiceRequest {
   id: string;
   code: string;
   title: string;
-  userRequirement?: string;
+  userRequirement: string | null;
   description: string;
   status: string;
   type: string;
   priority: string;
-  deadline?: string | Date;
-  assigneeId?: string;
+  deadline: Date | string | null | undefined;
   clientId: string;
   packageId: string;
-  subTasks?: SubTask[];
+  assigneeId: string | null;
+  createdById: string | null;
+  raiseDate: Date | string;
+  items: SROItem[];
+  subTasks: SubTask[];
+  client: Client;
+  package: Package;
+  assignee: User | null | undefined;
+  creator: User | null | undefined;
   comments?: Comment[];
   workLogs?: WorkLog[];
   attachments?: Attachment[];
-  items?: SROItem[];
-  package: Package;
-  client: Client;
-  creator?: { name: string };
-  assignee?: { id: string; name: string; role: string };
-  raiseDate: Date | string;
 }
 
 export interface Client {
   id: string;
   name: string;
+  code: string;
+  ownerId: string | null;
   packages?: Package[];
 }
 
@@ -108,9 +114,9 @@ export interface User {
 export interface AuditLog {
   id: string;
   action: string;
-  details?: string;
+  details: string | null;
+  user: { name: string; role: string } | null;
   createdAt: Date | string;
-  user?: { name: string };
 }
 
 export interface SRORule {
@@ -124,6 +130,12 @@ export interface SROItem {
   sroRuleId: string;
   quantity: number;
   sroRule?: SRORule;
+}
+
+export interface StatResults {
+  totalUsed: number;
+  limit: number;
+  percent: number;
 }
 
 export function RequestDetailView({ 
@@ -170,6 +182,8 @@ export function RequestDetailView({
   const [workLogs, setWorkLogs] = useState<WorkLog[]>(request.workLogs || []);
   const [logForm, setLogForm] = useState({ hours: "", description: "", subTaskId: "", serviceRequestItemId: "" });
   const [isLoggingTime, setIsLoggingTime] = useState(false);
+  const [tasLogForm, setTasLogForm] = useState({ hours: "", description: "" });
+  const [isLoggingTas, setIsLoggingTas] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeInfoTab, setActiveInfoTab] = useState<"DISCUSSION" | "EVIDENCE" | "AUDIT">("DISCUSSION");
@@ -185,7 +199,7 @@ export function RequestDetailView({
     // Fetch audit logs
     const fetchLogs = async () => {
       const logs = await getAuditLogs(request.id);
-      setAuditLogs(logs as AuditLog[]);
+      setAuditLogs(logs as unknown as AuditLog[]);
     };
     fetchLogs();
   }, [request]);
@@ -253,8 +267,9 @@ export function RequestDetailView({
     startTransition(async () => {
       const result = await updateServiceRequest(request.id, formData);
       if (result?.error) {
-        alert(result.error);
+        toast.error(result.error);
       } else {
+        toast.success("Đã lưu thay đổi");
         setHasChanges(false);
         const updatedSnapshot = {
           ...request,
@@ -263,12 +278,12 @@ export function RequestDetailView({
           description,
           type,
           priority,
-          deadline: deadline ? new Date(deadline).toISOString() : null,
+          deadline: deadline ? new Date(deadline) : undefined,
           assigneeId: assigneeId || null,
           items: request.package?.sroRules
             ? sroItems.map((si: SROItem) => ({
                 ...si,
-                sroRule: request.package.sroRules.find((r: SRORule) => r.id === si.sroRuleId)
+                sroRule: request.package?.sroRules?.find((r: SRORule) => r.id === si.sroRuleId)
               }))
             : request.items,
           assignee: assigneeId
@@ -288,8 +303,9 @@ export function RequestDetailView({
     startTransition(async () => {
       const result = await updateRequestStatus(request.id, newStatus);
       if (result?.error) {
-        alert(result.error);
+        toast.error(result.error);
       } else {
+        toast.success("Đã cập nhật trạng thái");
         onSaved?.({ ...request, status: newStatus });
         router.refresh();
       }
@@ -300,8 +316,11 @@ export function RequestDetailView({
     const formData = new FormData();
     formData.append("sroItems", JSON.stringify(newSroItems));
     const result = await updateServiceRequest(request.id, formData);
-    if (result?.error) alert("Lỗi: " + result.error);
-    else router.refresh();
+    if (result?.error) toast.error("Lỗi: " + result.error);
+    else {
+      toast.success("Đã cập nhật SRO");
+      router.refresh();
+    }
   };
 
   const addSroItem = (ruleId: string) => {
@@ -333,8 +352,9 @@ export function RequestDetailView({
       if (result.success) {
         setSubTasks([...subTasks, result.subTask]);
         setNewSubTask("");
+        toast.success("Đã thêm đầu việc");
         router.refresh();
-      } else alert(result.error);
+      } else toast.error(result.error || "Lỗi không xác định");
       setIsAddingSubTask(false);
     });
   };
@@ -347,8 +367,9 @@ export function RequestDetailView({
   const handleSaveSubTaskEdit = async () => {
     if (!editingSubTask || !editForm.content.trim()) return;
     const result = await updateSubTask(editingSubTask.id, request.id, editForm);
-    if (result.error) alert(result.error);
+    if (result.error) toast.error(result.error);
     else {
+      toast.success("Đã cập nhật đầu việc");
       setEditingSubTask(null);
       router.refresh();
     }
@@ -357,15 +378,21 @@ export function RequestDetailView({
   const handleToggleSubTask = async (subTask: SubTask) => {
     const newDone = !subTask.isDone;
     const result = await updateSubTask(subTask.id, request.id, { isDone: newDone, status: newDone ? "DONE" : "TODO" });
-    if (result.error) alert(result.error);
-    else router.refresh();
+    if (result.error) toast.error(result.error);
+    else {
+      toast.success(newDone ? "Đã xong đầu việc" : "Đã mở lại đầu việc");
+      router.refresh();
+    }
   };
 
   const handleDeleteSubTask = async (subTaskId: string) => {
     if (!confirm("Xóa đầu việc này?")) return;
     const result = await deleteSubTask(subTaskId, request.id);
-    if (result.error) alert(result.error);
-    else router.refresh();
+    if (result.error) toast.error(result.error);
+    else {
+      toast.success("Đã xóa đầu việc");
+      router.refresh();
+    }
   };
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -376,8 +403,9 @@ export function RequestDetailView({
     const result = await addComment(request.id, commentContent, authorName); 
     if (result.success) {
       setCommentContent("");
+      toast.success("Đã thêm bình luận");
       router.refresh(); 
-    } else alert(result.error);
+    } else toast.error(result.error || "Lỗi không xác định");
     setIsSubmitting(false);
   };
 
@@ -388,12 +416,12 @@ export function RequestDetailView({
 
     // Strict validation: Require SRO mapping
     if (!request.items || request.items.length === 0) {
-      alert("Ticket này chưa khai báo hạng mục SRO. Vui lòng bấm 'Quản lý SRO' để thêm hạng mục trước khi ghi nhận thời gian.");
+      toast.error("Ticket này chưa khai báo hạng mục SRO");
       return;
     }
 
     if (!logForm.serviceRequestItemId) {
-      alert("Vui lòng chọn một hạng mục SRO để gán thời gian làm việc này.");
+      toast.error("Vui lòng chọn hạng mục SRO");
       return;
     }
 
@@ -401,9 +429,37 @@ export function RequestDetailView({
     const result = await addWorkLog(request.id, hours, logForm.description, logForm.subTaskId, logForm.serviceRequestItemId);
     if (result.success) {
       setLogForm({ hours: "", description: "", subTaskId: "", serviceRequestItemId: "" });
+      toast.success("Đã ghi nhận thời gian làm việc");
       router.refresh();
-    } else alert(result.error);
+    } else toast.error(result.error || "Lỗi không xác định");
     setIsLoggingTime(false);
+  };
+  
+  const handleTasLogTime = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const hours = parseFloat(tasLogForm.hours);
+    if (isNaN(hours) || hours <= 0) {
+      toast.error("Số giờ không hợp lệ");
+      return;
+    }
+    
+    setIsLoggingTas(true);
+    try {
+      console.log("DEBUG - Calling logTasTime action...");
+      const result = await logTasTime(request.id, hours, tasLogForm.description);
+      if (result.success) {
+        setTasLogForm({ hours: "", description: "" });
+        toast.success(`Đã tự động chia đều ${hours}h cho ${result.count} hạng mục SRO`);
+        router.refresh();
+      } else {
+        toast.error(result.error || "Lỗi khi log time TAS");
+      }
+    } catch (error: any) {
+      console.error("DEBUG - Client-side error in handleTasLogTime:", error);
+      toast.error("Lỗi hệ thống: " + (error.message || "Không thể kết nối đến máy chủ"));
+    } finally {
+      setIsLoggingTas(false);
+    }
   };
 
   const handleDeleteWorkLog = async (logId: string) => {
@@ -413,12 +469,13 @@ export function RequestDetailView({
       
       if (result.success) {
         setWorkLogs((prev: WorkLog[]) => prev.filter((l: WorkLog) => l.id !== logId));
+        toast.success("Đã xóa log time");
         router.refresh();
       } else {
-        alert("Lỗi: " + (result.error || "Không thể xóa"));
+        toast.error("Lỗi: " + (result.error || "Không thể xóa"));
       }
     } catch (err: any) {
-      alert("Lỗi hệ thống: " + err.message);
+      toast.error("Lỗi hệ thống: " + err.message);
     } finally {
       setIsLoggingTime(false);
     }
@@ -434,8 +491,9 @@ export function RequestDetailView({
     const result = await updateWorkLog(editingWorkLog.id, request.id, parseFloat(logEditForm.hours), logEditForm.description, logEditForm.subTaskId, logEditForm.serviceRequestItemId);
     if (result.success) {
       setEditingWorkLog(null);
+      toast.success("Đã cập nhật log time");
       router.refresh();
-    } else alert(result.error);
+    } else toast.error(result.error || "Lỗi không xác định");
   };
 
   const handleQuickLog = (itemId: string, taskName?: string) => {
@@ -457,13 +515,14 @@ export function RequestDetailView({
       if (data.success) {
         // Manually update local state for instant feedback
         setAttachments(prev => [data.attachment, ...prev]);
+        toast.success("Đã tải tệp lên");
         router.refresh();
       } else {
-        alert("Lỗi upload: " + (data.error || "Không rõ nguyên nhân"));
+        toast.error("Lỗi upload: " + (data.error || "Không rõ nguyên nhân"));
       }
     } catch (error: any) { 
       console.error("Upload error:", error);
-      alert("Đã xảy ra lỗi khi tải file: " + error.message); 
+      toast.error("Lỗi khi tải file: " + error.message); 
     }
     finally { 
       setIsUploading(false); 
@@ -478,11 +537,12 @@ export function RequestDetailView({
     const result = await deleteAttachment(id, request.id);
     if (result.success) {
       setAttachments(prev => prev.filter(a => a.id !== id));
+      toast.success("Đã xóa bằng chứng");
       // Refresh audit logs
       const logs = await getAuditLogs(request.id);
       setAuditLogs(logs);
       router.refresh();
-    } else alert(result.error);
+    } else toast.error(result.error);
     setIsUploading(false);
   };
 
@@ -613,7 +673,7 @@ export function RequestDetailView({
                                </div>
                              ) : !isReadOnly && (
                                <button 
-                                 onClick={() => handleQuickLog(item.id, rule?.taskName)} 
+                                 onClick={() => handleQuickLog(item.id || "", rule?.taskName)} 
                                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest opacity-0 group-hover/sro:opacity-100 transition-all"
                                >
                                  LOG TIME
@@ -674,6 +734,42 @@ export function RequestDetailView({
                  </div>
               </form>
             )}
+
+            {/* TAS QUICK LOG OVERHEAD */}
+            {(session?.user as any)?.role === "TAS" || (session?.user as any)?.role === "ADMIN" ? (
+              <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-3xl space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Timer className="w-4 h-4 text-indigo-600" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Dành riêng cho TAS: Log meeting/Feedback</span>
+                </div>
+                <form onSubmit={handleTasLogTime} className="space-y-2">
+                  <div className="flex gap-2">
+                    <input 
+                      type="number" 
+                      step="0.5" 
+                      value={tasLogForm.hours} 
+                      onChange={(e) => setTasLogForm(prev => ({ ...prev, hours: e.target.value }))} 
+                      placeholder="Số giờ" 
+                      className="w-20 bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-800 p-2.5 rounded-xl text-sm font-black outline-none"
+                    />
+                    <input 
+                      value={tasLogForm.description} 
+                      onChange={(e) => setTasLogForm(prev => ({ ...prev, description: e.target.value }))} 
+                      placeholder="Mô tả nội dung meeting/feedback..." 
+                      className="flex-1 bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-800 p-2.5 rounded-xl text-[11px] font-bold outline-none" 
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={isLoggingTas || !tasLogForm.hours} 
+                      className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50"
+                    >
+                      {isLoggingTas ? "..." : "SPLIT LOG"}
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-slate-400 italic px-1">* Hệ thống sẽ tự động chia đều số giờ này cho tất cả SRO hiện có trong ticket.</p>
+                </form>
+              </div>
+            ) : null}
             <div className="space-y-4 pt-4">
               <div className="flex items-center gap-2 text-slate-400"><History className="w-3.5 h-3.5" /><span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Lịch sử ghi nhận</span></div>
               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">

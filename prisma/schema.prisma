@@ -128,6 +128,14 @@ model ServiceRequest {
   workLogs       WorkLog[]
   attachments    Attachment[]
   auditLogs      AuditLog[]
+  
+  @@index([clientId])
+  @@index([packageId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([assigneeId])
+  @@index([raiseDate])
   @@map("ServiceRequests")
 }
 
@@ -160,6 +168,8 @@ model SubTask {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([requestId])
+  @@index([status])
   @@map("SubTasks")
 }
 
@@ -236,6 +246,9 @@ model WorkLog {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([requestId])
+  @@index([userId])
+  @@index([logDate])
   @@map("WorkLogs")
 }
 
@@ -271,6 +284,9 @@ model AuditLog {
   
   createdAt DateTime @default(now())
  
+  @@index([requestId])
+  @@index([userId])
+  @@index([createdAt])
   @@map("AuditLogs")
 }
 
@@ -287,6 +303,9 @@ model Notification {
   
   createdAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
   @@map("Notifications")
 }
 

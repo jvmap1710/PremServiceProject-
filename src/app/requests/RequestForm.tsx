@@ -5,6 +5,7 @@ import { PlusCircle, X, Edit2, Calendar as CalendarIcon, Info, Trash2, Plus, Min
 import { createServiceRequest, updateServiceRequest } from "@/actions/request";
 import { getPackageUsage } from "@/actions/package";
 import { useSession } from "next-auth/react";
+import { toast } from "react-hot-toast";
 
 type SRORule = { id: string; taskName: string; estimateHours: number; requestsPerMonth: number };
 
@@ -63,6 +64,7 @@ export function RequestForm({ clients, users = [], initialData, onClose, autoOpe
       : new Date().toISOString().split("T")[0]
   );
   const [assigneeId, setAssigneeId] = useState(initialData?.assigneeId || "");
+  const [priority, setPriority] = useState(initialData?.priority || "MEDIUM");
 
   const isEdit = !!initialData;
 
@@ -84,6 +86,7 @@ export function RequestForm({ clients, users = [], initialData, onClose, autoOpe
           : new Date().toISOString().split("T")[0]
       );
       setAssigneeId(initialData?.assigneeId || "");
+      setPriority(initialData?.priority || "MEDIUM");
       setError(null);
     }
   }, [isOpen, initialData]);
@@ -184,19 +187,19 @@ export function RequestForm({ clients, users = [], initialData, onClose, autoOpe
     setError(null);
 
     if (!selectedClientId) {
-      setError("Vui lòng chọn khách hàng.");
+      toast.error("Vui lòng chọn khách hàng.");
       return;
     }
     if (!selectedPackageId) {
-      setError("Vui lòng chọn gói Premium.");
+      toast.error("Vui lòng chọn gói Premium.");
       return;
     }
     if (!title.trim()) {
-      setError("Vui lòng nhập tiêu đề yêu cầu.");
+      toast.error("Vui lòng nhập tiêu đề yêu cầu.");
       return;
     }
     if (!description.trim()) {
-      setError("Vui lòng nhập chi tiết mô tả kỹ thuật.");
+      toast.error("Vui lòng nhập chi tiết mô tả kỹ thuật.");
       return;
     }
 
@@ -211,6 +214,7 @@ export function RequestForm({ clients, users = [], initialData, onClose, autoOpe
     formData.append("type", type);
     formData.append("raiseDate", raiseDate);
     formData.append("assigneeId", assigneeId);
+    formData.append("priority", priority);
     formData.append("sroItems", JSON.stringify(sroItems));
 
     const result = initialData
@@ -218,8 +222,9 @@ export function RequestForm({ clients, users = [], initialData, onClose, autoOpe
       : await createServiceRequest(formData);
 
     if (result?.error) {
-      setError(result.error);
+      toast.error(result.error);
     } else {
+      toast.success(isEdit ? "Đã cập nhật yêu cầu" : "Đã tạo yêu cầu mới");
       handleClose();
     }
     setPending(false);
@@ -339,19 +344,35 @@ export function RequestForm({ clients, users = [], initialData, onClose, autoOpe
                 </div>
               </div>
 
-              {/* Assignee selection */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block px-1">Người xử lý (Assignee)</label>
-                <select
-                  value={assigneeId}
-                  onChange={(e) => setAssigneeId(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all font-bold text-slate-700 dark:text-slate-200 shadow-inner"
-                >
-                  <option value="">-- Chưa phân công --</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                  ))}
-                </select>
+              {/* Row: Assignee + Priority */}
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block px-1">Người xử lý (Assignee)</label>
+                  <select
+                    value={assigneeId}
+                    onChange={(e) => setAssigneeId(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all font-bold text-slate-700 dark:text-slate-200 shadow-inner"
+                  >
+                    <option value="">-- Chưa phân công --</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block px-1">Độ ưu tiên</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:bg-white dark:focus:bg-slate-800 outline-none transition-all font-bold text-slate-700 dark:text-slate-200 shadow-inner"
+                  >
+                    <option value="LOW">🔵 LOW (Thấp)</option>
+                    <option value="MEDIUM">🟢 MEDIUM (Vừa)</option>
+                    <option value="HIGH">🟠 HIGH (Cao)</option>
+                    <option value="URGENT">🔴 URGENT (Khẩn cấp)</option>
+                  </select>
+                </div>
               </div>
 
               {/* Package select */}

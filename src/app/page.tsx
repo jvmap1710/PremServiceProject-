@@ -15,7 +15,7 @@ export default async function DashboardPage() {
         client: true,
         package: true,
         assignee: { select: { id: true, name: true, role: true } },
-        creator: { select: { name: true } },
+        creator: { select: { id: true, name: true, role: true } },
         items: {
           include: {
             sroRule: true

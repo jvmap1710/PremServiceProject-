@@ -20,6 +20,7 @@ import { updateRequestStatus } from "@/actions/request";
 import { Modal } from "@/components/ui/Modal";
 import { RequestDetailView } from "../../[id]/RequestDetailView";
 import { RequestForm } from "../../RequestForm";
+import { toast } from "react-hot-toast";
 import { 
   Search, Filter, Plus, User, Package as PackageIcon, Trash2, 
   Palette, Edit3, Check, X as CloseIcon, UserCheck 
@@ -50,7 +51,7 @@ export function KanbanBoard({
   clients: any[],
   users?: any[],
   initialColumns?: any[],
-  currentUser?: { role: string, name?: string }
+  currentUser?: { id?: string; role: string; name?: string }
 }) {
   const [requests, setRequests] = useState(initialRequests);
   const [columns, setColumns] = useState(initialColumns);
@@ -149,6 +150,7 @@ export function KanbanBoard({
       setColumns([...columns, result.col]);
       setNewColumnTitle("");
       setIsAddingColumn(false);
+      toast.success("Đã thêm danh sách mới");
     }
   };
 
@@ -156,7 +158,7 @@ export function KanbanBoard({
     console.log("DEBUG - handleDeleteColumn triggered:", { id, statusKey });
     
     if (["TODO", "IN_PROGRESS", "DONE"].includes(statusKey.toUpperCase())) {
-      alert("Không thể xóa các cột trạng thái mặc định (Cần làm, Đang xử lý, Hoàn thành)");
+      toast.error("Không thể xóa các cột mặc định");
       return;
     }
 
@@ -167,18 +169,15 @@ export function KanbanBoard({
       const confirmName = window.prompt(`Để xác nhận xóa, vui lòng nhập chính xác tên cột "${colTitle}":`);
       
       if (confirmName && confirmName.trim().toLowerCase() === colTitle.toLowerCase()) {
-        console.log("DEBUG - Confirmed deletion with title match for:", id);
-
         const result = await deleteKanbanColumn(id);
         if (result.success) {
-          console.log("DEBUG - Deletion success, updating state");
           setColumns(columns.filter(c => c.id !== id));
+          toast.success("Đã xóa danh sách");
         } else if (result.error) {
-          console.error("DEBUG - Deletion failed:", result.error);
-          alert("Lỗi khi xóa cột: " + result.error);
+          toast.error("Lỗi khi xóa: " + result.error);
         }
       } else if (confirmName !== null) {
-        alert("Tên xác nhận không chính xác. Hủy bỏ thao tác xóa.");
+        toast.error("Tên xác nhận không chính xác");
       }
     } else {
       console.log("DEBUG - Deletion cancelled by user");
@@ -272,7 +271,9 @@ export function KanbanBoard({
       const result = await updateRequestStatus(activeId, nextStatus);
       if (result?.error) {
         setRequests(prev => prev.map(r => r.id === activeId ? { ...r, status: dragOriginalStatus.current! } : r));
-        alert(result.error);
+        toast.error(result.error);
+      } else {
+        toast.success("Cập nhật trạng thái thành công");
       }
     }
 
