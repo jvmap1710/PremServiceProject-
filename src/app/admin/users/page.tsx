@@ -78,7 +78,7 @@ export default function UserManagementPage() {
         setCreateForm({ username: "", name: "", role: "TAS", password: "" });
         fetchUsers();
       } else {
-        toast.error(res.error);
+        toast.error(res.error || "Có lỗi xảy ra");
       }
     });
   };
@@ -101,7 +101,7 @@ export default function UserManagementPage() {
         setIsResetModalOpen(false);
         setResetPasswordValue("");
       } else {
-        toast.error(res.error);
+        toast.error(res.error || "Có lỗi xảy ra");
       }
     });
   };
@@ -113,7 +113,7 @@ export default function UserManagementPage() {
       toast.success("Đã xóa nhân sự");
       fetchUsers();
     } else {
-      toast.error(res.error);
+      toast.error(res.error || "Có lỗi xảy ra");
     }
   };
 
