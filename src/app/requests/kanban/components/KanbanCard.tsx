@@ -91,8 +91,9 @@ export function KanbanCard({
 
 
         style={{ 
-          borderColor: isOverdue || isOverBudget ? (isOverBudget ? "#f43f5e" : "#fca5a5") : undefined,
-          backgroundColor: isOverdue ? undefined : undefined,
+          borderTopColor: isOverdue || isOverBudget ? (isOverBudget ? "#f43f5e" : "#fca5a5") : undefined,
+          borderRightColor: isOverdue || isOverBudget ? (isOverBudget ? "#f43f5e" : "#fca5a5") : undefined,
+          borderBottomColor: isOverdue || isOverBudget ? (isOverBudget ? "#f43f5e" : "#fca5a5") : undefined,
           borderLeftWidth: '8px',
           borderLeftColor: columnColor
         }}

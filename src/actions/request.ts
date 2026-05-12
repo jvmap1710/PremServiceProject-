@@ -334,7 +334,10 @@ export async function updateRequestStatus(id: string, status: string) {
 
     const currentRequest = await prisma.serviceRequest.findUnique({
       where: { id },
-      select: { assigneeId: true, status: true, workLogs: { take: 1 } }
+      include: { 
+        items: { select: { id: true, sroRule: { select: { taskName: true } } } },
+        workLogs: { select: { serviceRequestItemId: true } }
+      }
     });
 
     if (!currentRequest) return { error: "Yêu cầu không tồn tại" };
@@ -348,8 +351,20 @@ export async function updateRequestStatus(id: string, status: string) {
         return { error: "Bạn không có quyền hoàn thành yêu cầu này" };
       }
 
-      if (currentRequest.workLogs.length === 0) {
-        return { error: "Bạn phải log job ít nhất một lần trước khi hoàn thành" };
+      // Check if ALL SRO items have been logged
+      const loggedItemIds = new Set(
+        currentRequest.workLogs
+          .map(log => log.serviceRequestItemId)
+          .filter(Boolean)
+      );
+
+      const unloggedItems = currentRequest.items.filter(item => !loggedItemIds.has(item.id));
+
+      if (unloggedItems.length > 0) {
+        const itemNames = unloggedItems.map(item => item.sroRule.taskName).join(", ");
+        return { 
+          error: `Bạn chưa log thời gian cho các hạng mục SRO sau: ${itemNames}. Vui lòng log đủ các hạng mục trước khi hoàn thành.` 
+        };
       }
     }
 

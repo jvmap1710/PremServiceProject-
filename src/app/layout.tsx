@@ -10,6 +10,7 @@ const beVietnam = Be_Vietnam_Pro({
 
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Providers } from "@/components/Providers";
+import NextTopLoader from "nextjs-toploader";
 
 export const metadata: Metadata = {
   title: "PremiumService - Internal Management",
@@ -28,6 +29,17 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <NextTopLoader 
+          color="#4f46e5"
+          initialPosition={0.08}
+          crawlSpeed={200}
+          height={3}
+          crawl={true}
+          showSpinner={false}
+          easing="ease"
+          speed={200}
+          shadow="0 0 10px #4f46e5,0 0 5px #4f46e5"
+        />
         <Providers>
           <MainLayout>{children}</MainLayout>
         </Providers>

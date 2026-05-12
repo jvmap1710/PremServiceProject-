@@ -246,9 +246,12 @@ model WorkLog {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  groupId     String?  
+  
   @@index([requestId])
   @@index([userId])
   @@index([logDate])
+  @@index([groupId])
   @@map("WorkLogs")
 }
 

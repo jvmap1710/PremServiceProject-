@@ -47,6 +47,8 @@ export interface WorkLog {
   serviceRequestItemId: string | null;
   userId: string | null;
   logDate: Date | string;
+  groupId?: string | null;
+  sroNames?: string;
   serviceRequestItem?: {
     sroRule?: {
       taskName: string;
@@ -557,6 +559,40 @@ export function RequestDetailView({
   }, [workLogs]);
 
   const totalLoggedHours = useMemo(() => workLogs.reduce((sum: number, log: WorkLog) => sum + log.hours, 0), [workLogs]);
+
+  // Group workLogs by groupId for UI display
+  const displayedLogs = useMemo(() => {
+    const grouped: WorkLog[] = [];
+    const seenGroups = new Set<string>();
+
+    workLogs.forEach(log => {
+      if (log.groupId) {
+        if (!seenGroups.has(log.groupId)) {
+          // Find all logs in this group and sum their hours
+          const groupLogs = workLogs.filter(l => l.groupId === log.groupId);
+          const totalHours = groupLogs.reduce((sum, l) => sum + l.hours, 0);
+          
+          // Collect unique SRO names
+          const uniqueSroNames = Array.from(new Set(
+            groupLogs
+              .map(l => l.serviceRequestItem?.sroRule?.taskName)
+              .filter(Boolean)
+          )).join(", ");
+
+          grouped.push({
+            ...log,
+            hours: totalHours,
+            sroNames: uniqueSroNames
+          });
+          seenGroups.add(log.groupId);
+        }
+      } else {
+        grouped.push(log);
+      }
+    });
+    return grouped.sort((a, b) => new Date(b.logDate).getTime() - new Date(a.logDate).getTime());
+  }, [workLogs]);
+
   const isOverdue = deadline && new Date(deadline) < new Date() && request.status !== "DONE";
 
   return (
@@ -719,20 +755,48 @@ export function RequestDetailView({
           <div id="log-time-section" className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
             <div className="flex items-center justify-between"><h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lịch sử Log Time</h3><span className="text-[10px] font-black bg-emerald-600 text-white px-3 py-1 rounded-full">{totalLoggedHours.toFixed(2)}h Total</span></div>
             {!isReadOnly && (
-              <form onSubmit={handleAddWorkLog} className="space-y-3">
-                 <div className="flex gap-2">
-                    <input id="log-hours-input" type="number" step="0.5" value={logForm.hours} onChange={(e) => setLogForm(prev => ({ ...prev, hours: e.target.value }))} placeholder="Số giờ" className="w-24 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 p-3 rounded-2xl text-sm font-black outline-none transition-all" />
-                    <select value={logForm.serviceRequestItemId ? `sro_${logForm.serviceRequestItemId}` : logForm.subTaskId ? `st_${logForm.subTaskId}` : ""} onChange={(e) => { const val = e.target.value; if (val.startsWith("st_")) setLogForm(prev => ({ ...prev, subTaskId: val.replace("st_", ""), serviceRequestItemId: "" })); else if (val.startsWith("sro_")) setLogForm(prev => ({ ...prev, serviceRequestItemId: val.replace("sro_", ""), subTaskId: "" })); else setLogForm(prev => ({ ...prev, subTaskId: "", serviceRequestItemId: "" })); }} className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 p-3 rounded-2xl text-[10px] font-bold outline-none ring-2 ring-indigo-500/10">
+              <div className="p-4 bg-emerald-50/30 dark:bg-emerald-900/10 border border-emerald-100/50 dark:border-emerald-800/30 rounded-3xl space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4 text-emerald-600" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Dành cho DEV: Ghi nhận công việc chi tiết</span>
+                </div>
+                <form onSubmit={handleAddWorkLog} className="space-y-3">
+                  <div className="flex gap-2">
+                    <input 
+                      id="log-hours-input" 
+                      type="number" 
+                      step="0.5" 
+                      value={logForm.hours} 
+                      onChange={(e) => setLogForm(prev => ({ ...prev, hours: e.target.value }))} 
+                      placeholder="Số giờ" 
+                      className="w-24 bg-white dark:bg-slate-950 border border-emerald-100 dark:border-emerald-800/50 p-3 rounded-2xl text-sm font-black outline-none transition-all focus:ring-2 focus:ring-emerald-500/20" 
+                    />
+                    <select 
+                      value={logForm.serviceRequestItemId ? `sro_${logForm.serviceRequestItemId}` : logForm.subTaskId ? `st_${logForm.subTaskId}` : ""} 
+                      onChange={(e) => { 
+                        const val = e.target.value; 
+                        if (val.startsWith("st_")) setLogForm(prev => ({ ...prev, subTaskId: val.replace("st_", ""), serviceRequestItemId: "" })); 
+                        else if (val.startsWith("sro_")) setLogForm(prev => ({ ...prev, serviceRequestItemId: val.replace("sro_", ""), subTaskId: "" })); 
+                        else setLogForm(prev => ({ ...prev, subTaskId: "", serviceRequestItemId: "" })); 
+                      }} 
+                      className="flex-1 bg-white dark:bg-slate-950 border border-emerald-100 dark:border-emerald-800/50 p-3 rounded-2xl text-[10px] font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    >
                       <option value="">Phân loại SRO (Bắt buộc)</option>
                       {request.items?.map((it: SROItem) => <option key={it.id} value={`sro_${it.id}`}>SRO: {it.sroRule?.taskName}</option>)}
                       {subTasks.map((st: SubTask) => <option key={st.id} value={`st_${st.id}`}>Task: {st.content}</option>)}
                     </select>
-                 </div>
-                 <div className="relative">
-                    <input value={logForm.description} onChange={(e) => setLogForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Mô tả công việc đã làm..." className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 p-3 pr-12 rounded-2xl text-xs font-bold outline-none" />
-                    <button type="submit" disabled={isLoggingTime || !logForm.hours} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all"><Send className="w-4 h-4" /></button>
-                 </div>
-              </form>
+                  </div>
+                  <div className="relative">
+                    <input 
+                      value={logForm.description} 
+                      onChange={(e) => setLogForm(prev => ({ ...prev, description: e.target.value }))} 
+                      placeholder="Mô tả công việc đã làm..." 
+                      className="w-full bg-white dark:bg-slate-950 border border-emerald-100 dark:border-emerald-800/50 p-3 pr-12 rounded-2xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/20" 
+                    />
+                    <button type="submit" disabled={isLoggingTime || !logForm.hours} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-md active:scale-95 disabled:opacity-30"><Send className="w-4 h-4" /></button>
+                  </div>
+                </form>
+              </div>
             )}
 
             {/* TAS QUICK LOG OVERHEAD */}
@@ -773,7 +837,7 @@ export function RequestDetailView({
             <div className="space-y-4 pt-4">
               <div className="flex items-center gap-2 text-slate-400"><History className="w-3.5 h-3.5" /><span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Lịch sử ghi nhận</span></div>
               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                {workLogs.map((log: WorkLog) => (
+                {displayedLogs.map((log: WorkLog) => (
                   <div key={log.id} className="p-4 bg-slate-50/50 dark:bg-slate-950/30 rounded-2xl border border-slate-100 dark:border-slate-800 relative group transition-all hover:shadow-md">
                     <div className="flex justify-between items-start mb-1">
                       <span className="text-xs font-black text-emerald-600">{log.hours} giờ</span>
@@ -804,13 +868,15 @@ export function RequestDetailView({
                             </div>
                           ) : (
                             <>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleEditWorkLog(log); }}
-                                className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
-                                title="Sửa"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
+                              {!log.groupId && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleEditWorkLog(log); }}
+                                  className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                                  title="Sửa"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setDeletingId(log.id); }}
                                 className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
@@ -826,7 +892,7 @@ export function RequestDetailView({
                     <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed mb-4">{log.description}</p>
                     <div className="flex items-center gap-2">
                       {log.subTaskId && <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 px-2 py-0.5 rounded-lg border border-indigo-100">Task: {subTasks.find((st: SubTask) => st.id === log.subTaskId)?.content}</span>}
-                      {log.serviceRequestItemId && <span className="text-[9px] bg-blue-50 dark:bg-blue-900/20 text-blue-500 px-2 py-0.5 rounded-lg border border-blue-100">SRO: {log.serviceRequestItem?.sroRule?.taskName}</span>}
+                      {log.serviceRequestItemId && <span className="text-[9px] bg-blue-50 dark:bg-blue-900/20 text-blue-500 px-2 py-0.5 rounded-lg border border-blue-100">{log.groupId ? `SRO: [${log.sroNames || "Nhiều hạng mục"}]` : `SRO: ${log.serviceRequestItem?.sroRule?.taskName}`}</span>}
                     </div>
                   </div>
                 ))}

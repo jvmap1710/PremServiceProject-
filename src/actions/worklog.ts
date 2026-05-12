@@ -76,10 +76,25 @@ export async function addWorkLog(
 export async function deleteWorkLog(id: string, requestId: string) {
   console.log(`DEBUG - Server Action: deleteWorkLog called for ID: ${id}, RequestID: ${requestId}`);
   try {
-    const deleted = await prisma.workLog.delete({
-      where: { id }
+    // Check if this log belongs to a group
+    const log = await prisma.workLog.findUnique({
+      where: { id },
+      select: { groupId: true }
     });
-    console.log(`DEBUG - Server Action: Successfully deleted workLog: ${deleted.id}`);
+
+    let deletedCount = 0;
+    if (log?.groupId) {
+      const result = await prisma.workLog.deleteMany({
+        where: { groupId: log.groupId }
+      });
+      deletedCount = result.count;
+      console.log(`DEBUG - Server Action: Deleted group with ${deletedCount} logs`);
+    } else {
+      await prisma.workLog.delete({
+        where: { id }
+      });
+      deletedCount = 1;
+    }
 
     revalidatePath(`/requests/${requestId}`);
     revalidatePath(`/requests/kanban`);
@@ -168,9 +183,10 @@ export async function logTasTime(
 
     const itemCount = request.items.length;
     const hoursPerItem = hours / itemCount;
-    const tasDescription = `[ĐIỀU PHỐI] ${description || "Meeting/Feedback"}`;
+    const groupId = `tas-split-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const tasDescription = `${description || "Meeting/Feedback"} (Đã chia đều cho ${itemCount} hạng mục SRO)`;
 
-    console.log(`DEBUG - logTasTime: Splitting ${hours}h across ${itemCount} items (${hoursPerItem}h/item)`);
+    console.log(`DEBUG - logTasTime: Splitting ${hours}h across ${itemCount} items (${hoursPerItem}h/item) with groupId: ${groupId}`);
 
     // Create logs for each item
     await Promise.all(request.items.map(item => 
@@ -181,6 +197,7 @@ export async function logTasTime(
           hours: hoursPerItem,
           description: tasDescription,
           userId: session.user?.id,
+          groupId: groupId
         }
       })
     ));
