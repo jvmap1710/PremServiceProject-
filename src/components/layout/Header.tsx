@@ -1,15 +1,18 @@
 "use client";
 
 import { logOut } from "@/actions/auth";
-import { LogOut, User, Bell, Search, Menu, X } from "lucide-react";
+import { changeMyPassword } from "@/actions/user";
+import { LogOut, User, Bell, Search, Menu, X, Key, CheckCircle2 } from "lucide-react";
 import { SIDEBAR_TOGGLE_EVENT } from "./Sidebar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { ThemeToggle } from "../ThemeToggle";
 import Link from "next/link";
 import { getNotifications, markAsRead, markAllAsRead } from "@/actions/notification";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useRouter } from "next/navigation";
+import { Modal } from "@/components/ui/Modal";
+import { toast } from "react-hot-toast";
 
 interface HeaderProps {
   userName: string;
@@ -27,6 +30,35 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notiOpen, setNotiOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  // Change Password state
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ old: "", new: "", confirm: "" });
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwdForm.new !== pwdForm.confirm) {
+      toast.error("Mật khẩu xác nhận không khớp!");
+      return;
+    }
+    if (pwdForm.new.length < 6) {
+      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự!");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await changeMyPassword(pwdForm.old, pwdForm.new);
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Đổi mật khẩu thành công!");
+        setIsPasswordModalOpen(false);
+        setPwdForm({ old: "", new: "", confirm: "" });
+      }
+    });
+  };
 
   useEffect(() => {
     async function loadNotifications() {
@@ -188,28 +220,104 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
 
         <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
 
-        {/* User info */}
-        <div className="flex items-center gap-2 md:gap-3">
-          <div className="text-right hidden md:block">
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none mb-1">Xin chào,</p>
-            <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate max-w-[150px] leading-none">
-              {userName} <span className="text-blue-600 dark:text-blue-400 font-bold text-[10px]">({getRoleLabel(userRole)})</span>
-            </p>
-          </div>
-          <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-400 shrink-0 shadow-sm border border-white dark:border-slate-800">
-            <User className="w-4 h-4 md:w-6 md:h-6" />
-          </div>
-          <form action={logOut}>
-            <button
-              type="submit"
-              className="p-1.5 md:p-2 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-              title="Đăng xuất"
-            >
-              <LogOut className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
-          </form>
+        {/* User info & Dropdown */}
+        <div className="relative">
+          <button 
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="flex items-center gap-2 md:gap-3 p-1 rounded-full hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors focus:outline-none"
+          >
+            <div className="text-right hidden md:block">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none mb-1">Xin chào,</p>
+              <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate max-w-[150px] leading-none">
+                {userName} <span className="text-blue-600 dark:text-blue-400 font-bold text-[10px]">({getRoleLabel(userRole)})</span>
+              </p>
+            </div>
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-400 shrink-0 shadow-sm border border-white dark:border-slate-800">
+              <User className="w-4 h-4 md:w-6 md:h-6" />
+            </div>
+          </button>
+
+          {/* User Dropdown Menu */}
+          {userMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-[20px] border border-slate-100 dark:border-slate-800 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 py-2">
+                <button
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    setIsPasswordModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  <Key className="w-4 h-4" />
+                  Đổi mật khẩu
+                </button>
+                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
+                <form action={logOut} className="w-full">
+                  <button
+                    type="submit"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Đăng xuất
+                  </button>
+                </form>
+              </div>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <Modal 
+        isOpen={isPasswordModalOpen} 
+        onClose={() => !isPending && setIsPasswordModalOpen(false)}
+        title="ĐỔI MẬT KHẨU"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleChangePassword} className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Mật khẩu hiện tại</label>
+            <input 
+              type="password"
+              value={pwdForm.old}
+              onChange={e => setPwdForm({ ...pwdForm, old: e.target.value })}
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+              required
+              disabled={isPending}
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Mật khẩu mới</label>
+            <input 
+              type="password"
+              value={pwdForm.new}
+              onChange={e => setPwdForm({ ...pwdForm, new: e.target.value })}
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+              required
+              disabled={isPending}
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Xác nhận mật khẩu mới</label>
+            <input 
+              type="password"
+              value={pwdForm.confirm}
+              onChange={e => setPwdForm({ ...pwdForm, confirm: e.target.value })}
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-semibold"
+              required
+              disabled={isPending}
+            />
+          </div>
+          <button 
+            type="submit"
+            disabled={isPending}
+            className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50 flex justify-center items-center gap-2"
+          >
+            {isPending ? "Đang xử lý..." : <><CheckCircle2 className="w-4 h-4" /> Đổi Mật Khẩu</>}
+          </button>
+        </form>
+      </Modal>
     </header>
   );
 }
