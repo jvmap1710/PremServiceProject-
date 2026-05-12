@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { getUsers, updateUserRole, updateUserInfo, deleteUser, createUser, resetUserPassword } from "@/actions/user";
 import { Modal } from "@/components/ui/Modal";
+import { toast } from "react-hot-toast";
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -22,6 +23,10 @@ export default function UserManagementPage() {
   // Edit Modal State
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", role: "" });
+
+  // Reset Password Modal State
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
 
   useEffect(() => {
     fetchUsers();
@@ -51,41 +56,52 @@ export default function UserManagementPage() {
       const res2 = await updateUserRole(editingUser.id, editForm.role);
       
       if (res1.success && res2.success) {
+        toast.success("Cập nhật thông tin thành công");
         setEditingUser(null);
         fetchUsers();
       } else {
-        alert("Lỗi: " + (res1.error || res2.error));
+        toast.error(res1.error || res2.error || "Có lỗi xảy ra");
       }
     });
   };
 
   const handleCreate = async () => {
     if (!createForm.username || !createForm.name) {
-      alert("Vui lòng điền đủ Username và Họ tên.");
+      toast.error("Vui lòng điền đủ Username và Họ tên.");
       return;
     }
     startTransition(async () => {
       const res = await createUser(createForm);
       if (res.success) {
+        toast.success("Tạo tài khoản thành công");
         setIsCreateModalOpen(false);
         setCreateForm({ username: "", name: "", role: "TAS", password: "" });
         fetchUsers();
       } else {
-        alert("Lỗi: " + res.error);
+        toast.error(res.error);
       }
     });
   };
 
-  const handleResetPassword = async () => {
+  const handleResetPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!editingUser) return;
-    if (!confirm(`Bạn có chắc chắn muốn Reset mật khẩu cho ${editingUser.name} về mặc định (password123)?`)) return;
+    
+    const finalPassword = resetPasswordValue.trim() || "password123";
+
+    if (finalPassword.length > 0 && finalPassword.length < 6) {
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự!");
+      return;
+    }
     
     startTransition(async () => {
-      const res = await resetUserPassword(editingUser.id);
+      const res = await resetUserPassword(editingUser.id, finalPassword);
       if (res.success) {
-        alert("Reset mật khẩu thành công! Mật khẩu mới là: password123");
+        toast.success(`Đã reset mật khẩu thành: ${finalPassword}`);
+        setIsResetModalOpen(false);
+        setResetPasswordValue("");
       } else {
-        alert("Lỗi: " + res.error);
+        toast.error(res.error);
       }
     });
   };
@@ -94,9 +110,10 @@ export default function UserManagementPage() {
     if (!confirm("Bạn có chắc chắn muốn xóa user này? Hành động này không thể hoàn tác.")) return;
     const res = await deleteUser(userId);
     if (res.success) {
+      toast.success("Đã xóa nhân sự");
       fetchUsers();
     } else {
-      alert(res.error);
+      toast.error(res.error);
     }
   };
 
@@ -346,15 +363,52 @@ export default function UserManagementPage() {
               {isPending ? "Đang lưu..." : "Cập nhật tài khoản"}
             </button>
             <button 
-              onClick={handleResetPassword}
+              onClick={() => {
+                setResetPasswordValue("");
+                setIsResetModalOpen(true);
+              }}
               disabled={isPending}
-              className="w-full bg-slate-50 dark:bg-slate-900 text-slate-500 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-100 dark:border-slate-800 flex items-center justify-center gap-2"
+              className="w-full bg-slate-50 dark:bg-slate-900 text-slate-500 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-slate-100 dark:border-slate-800 flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <Key className="w-4 h-4" />
               Reset Mật khẩu
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Reset Password Modal */}
+      <Modal 
+        isOpen={isResetModalOpen} 
+        onClose={() => !isPending && setIsResetModalOpen(false)}
+        title="RESET MẬT KHẨU"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">
+              Bạn đang đặt lại mật khẩu cho tài khoản: <span className="font-black">@{editingUser?.username}</span>
+            </p>
+          </div>
+          <div>
+            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Mật khẩu mới (Tối thiểu 6 ký tự)</label>
+            <input 
+              type="text"
+              value={resetPasswordValue}
+              onChange={e => setResetPasswordValue(e.target.value)}
+              placeholder="Để trống để dùng mật khẩu mặc định (password123)"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-semibold"
+              disabled={isPending}
+            />
+          </div>
+          <button 
+            type="submit"
+            disabled={isPending}
+            className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50 flex justify-center items-center gap-2"
+          >
+            {isPending ? "Đang xử lý..." : <><CheckCircle2 className="w-4 h-4" /> Xác nhận Reset</>}
+          </button>
+        </form>
       </Modal>
     </div>
   );
