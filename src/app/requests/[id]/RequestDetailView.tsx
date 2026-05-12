@@ -840,7 +840,15 @@ export function RequestDetailView({
                 {displayedLogs.map((log: WorkLog) => (
                   <div key={log.id} className="p-4 bg-slate-50/50 dark:bg-slate-950/30 rounded-2xl border border-slate-100 dark:border-slate-800 relative group transition-all hover:shadow-md">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-black text-emerald-600">{log.hours} giờ</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-black text-emerald-600">{log.hours} giờ</span>
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit">
+                          <User className="w-3 h-3 text-indigo-500" />
+                          <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">
+                            {log.user?.name || "Hệ thống"}
+                          </span>
+                        </div>
+                      </div>
                       <div className="flex flex-col items-end relative">
                         <span 
                           suppressHydrationWarning 
