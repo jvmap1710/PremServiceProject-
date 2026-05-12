@@ -1,25 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaMssql } from "@prisma/adapter-mssql";
-import * as dotenv from 'dotenv';
-
-dotenv.config();
-
-function createPrismaClient() {
-  const adapter = new PrismaMssql({
-    server: process.env.DB_SERVER || "localhost",
-    port: parseInt(process.env.DB_PORT || "1433"),
-    database: process.env.DB_NAME || "PSManagement",
-    user: process.env.DB_USER || "",
-    password: process.env.DB_PASSWORD || "",
-    options: {
-      trustServerCertificate: true,
-    },
-  });
-
-  return new PrismaClient({ adapter });
-}
-
-const prisma = createPrismaClient();
+import { prisma } from '../src/lib/prisma';
 
 async function main() {
   console.log('Starting seed sample data for reports...');

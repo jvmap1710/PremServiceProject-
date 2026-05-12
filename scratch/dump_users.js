@@ -1,18 +1,11 @@
 const { PrismaClient } = require('@prisma/client');
-const { PrismaMssql } = require('@prisma/adapter-mssql');
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
+require('dotenv').config();
 
 async function main() {
-  const adapter = new PrismaMssql({
-    server: process.env.DB_SERVER || "localhost",
-    port: parseInt(process.env.DB_PORT || "1433"),
-    database: process.env.DB_NAME || "PSManagement",
-    user: process.env.DB_USER || "",
-    password: process.env.DB_PASSWORD || "",
-    options: {
-      trustServerCertificate: true,
-    },
-  });
-
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });
   const users = await prisma.user.findMany();
   console.log(JSON.stringify(users, null, 2));

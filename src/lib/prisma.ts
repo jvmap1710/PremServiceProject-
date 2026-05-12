@@ -1,23 +1,21 @@
-import { PrismaMssql } from "@prisma/adapter-mssql";
-import { PrismaClient } from "@prisma/client";
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
-  const adapter = new PrismaMssql({
-    server: process.env.DB_SERVER || "localhost",
-    port: parseInt(process.env.DB_PORT || "1433"),
-    database: process.env.DB_NAME || "PSManagement",
-    user: process.env.DB_USER || "",
-    password: process.env.DB_PASSWORD || "",
-    options: {
-      trustServerCertificate: true,
-    },
-  });
-
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is not defined in environment variables');
+  }
+  
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
 
 export const prisma = globalForPrisma.prisma || createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

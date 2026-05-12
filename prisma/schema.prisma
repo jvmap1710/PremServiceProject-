@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlserver"
+  provider = "postgresql"
 }
 
 generator client {
@@ -14,7 +14,7 @@ model Client {
   
   picName   String?  // Tên người liên hệ (PIC)
   picContact String? // Liên hệ PIC (SĐT/Email)
-  address    String?  @db.NVarChar(Max) // Địa chỉ
+  address    String?  // Địa chỉ
 
   createdAt DateTime @default(now())
 
@@ -82,8 +82,8 @@ model SRORule {
   taskName        String         // Tên nghiệp vụ (e.g., Update Content, Fix Bug)
   estimateHours   Float          // Số giờ quy đổi (e.g., 0.5, 1.0)
   requestsPerMonth Int           @default(1) // Số lần yêu cầu định mức mỗi tháng
-  scope           String?        @db.NVarChar(Max) // Phạm vi
-  exclusions      String?        @db.NVarChar(Max) // Ngoại trừ
+  scope           String?        // Phạm vi
+  exclusions      String?        // Ngoại trừ
   
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -107,8 +107,8 @@ model ServiceRequest {
   subTasks       SubTask[]
   
   title          String         // Tiêu đề ngắn
-  userRequirement String?        @db.Text // Yêu cầu từ phía khách hàng (Nghiệp vụ)
-  description    String         @db.Text // Mô tả kỹ thuật chi tiết (Technical)
+  userRequirement String?        // Yêu cầu từ phía khách hàng (Nghiệp vụ)
+  description    String         // Mô tả kỹ thuật chi tiết (Technical)
   status         String    @default("TODO") // TODO, IN_PROGRESS, DONE
   type           String    @default("TASK") // TASK, BUG, FEATURE, URGENT
   priority       String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
@@ -160,8 +160,8 @@ model SubTask {
   id          String   @id @default(cuid())
   requestId   String
   request     ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  content     String   @db.NVarChar(Max) // Tiêu đề/Nội dung chính
-  description String?  @db.NVarChar(Max) // Mô tả chi tiết cho Dev
+  content     String   // Tiêu đề/Nội dung chính
+  description String?  // Mô tả chi tiết cho Dev
   status      String   @default("TODO") // TODO, IN_PROGRESS, DONE
   isDone      Boolean  @default(false)
   workLogs    WorkLog[]
@@ -177,7 +177,7 @@ model Comment {
   id          String   @id @default(cuid())
   requestId   String
   request     ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  content     String   @db.NVarChar(Max)
+  content     String   
   authorName  String   // Tên người bình luận
   userEmail   String?  // Email người bình luận (dùng để lọc thông báo)
   createdAt   DateTime @default(now())
@@ -240,7 +240,7 @@ model WorkLog {
   user        User?    @relation(fields: [userId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   
   hours       Float
-  description String?  @db.NVarChar(Max)
+  description String?  
   logDate     DateTime @default(now())
   
   createdAt   DateTime @default(now())
@@ -258,7 +258,7 @@ model Attachment {
   url       String
   fileType  String?
   size      Int?
-  data      Bytes?   @db.VarBinary(Max)
+  data      Bytes?   @db.ByteA
   
   requestId String
   request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -280,7 +280,7 @@ model AuditLog {
   user      User?    @relation(fields: [userId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   
   action    String   // e.g., "UPLOAD_EVIDENCE", "DELETE_EVIDENCE", "UPDATE_STATUS", "UPDATE_INFO"
-  details   String?  @db.NVarChar(Max) // JSON or text description of the change
+  details   String?  // JSON or text description of the change
   
   createdAt DateTime @default(now())
  
@@ -296,7 +296,7 @@ model Notification {
   user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
   
   title     String
-  message   String   @db.NVarChar(Max)
+  message   String   
   type      String   // e.g., "ASSIGNMENT", "STATUS_CHANGE", "COMMENT"
   link      String?  // Đường dẫn tới request/task liên quan
   isRead    Boolean  @default(false)

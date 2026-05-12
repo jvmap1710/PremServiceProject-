@@ -1,21 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaMssql } from "@prisma/adapter-mssql";
-import * as dotenv from "dotenv";
-
-dotenv.config();
-
-const adapter = new PrismaMssql({
-  server: process.env.DB_SERVER || "localhost",
-  port: parseInt(process.env.DB_PORT || "1433"),
-  database: process.env.DB_NAME || "PSManagement",
-  user: process.env.DB_USER || "",
-  password: process.env.DB_PASSWORD || "",
-  options: {
-    trustServerCertificate: true,
-  },
-});
-
-const prisma = new PrismaClient({ adapter });
+import { prisma } from './src/lib/prisma';
 
 async function main() {
   const clients = await prisma.client.findMany({
