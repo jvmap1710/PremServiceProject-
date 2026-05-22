@@ -44,7 +44,7 @@ body {
   transition: background-color 0.5s ease, color 0.5s ease;
 }
 
-/* Chỉ áp dụng chuyển màu mượt cho body và các container chính để tránh lag */
+/* Only apply smooth transitions to body and main containers to avoid lag */
 body, 
 header, 
 aside, 

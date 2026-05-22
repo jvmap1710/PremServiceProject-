@@ -70,7 +70,7 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
     const newRates = { ...financialRates, [key]: value };
     setFinancialRates(newRates as any);
     
-    // Lưu vào DB
+    // Save to DB
     if (key === 'userSalaries') {
       await updateFinancialSettings({ userSalaries: value });
     } else {
@@ -116,13 +116,14 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
       {/* Top Header Row */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Báo cáo vận hành Premium Service</h1>
-          <p className="text-slate-500 font-medium text-sm">Phân tích dữ liệu và hiệu suất dịch vụ cấp cao</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Premium Service Operation Report</h1>
+          <p className="text-slate-500 font-medium text-sm">Analyze data and premium service performance</p>
         </div>
         <ExportButton 
           data={data} 
           periodLabel={data?.period?.label || ""} 
           userRole={userRole}
+          users={users}
           financialRates={financialRates}
         />
       </div>
@@ -160,7 +161,7 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
             : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          TỔNG QUAN
+          OVERVIEW
         </button>
         <button
           onClick={() => handleTabChange("COMPARISON")}
@@ -170,7 +171,7 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
             : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          SO SÁNH
+          COMPARISON
         </button>
         <button
           onClick={() => handleTabChange("OPTIMIZATION")}
@@ -180,7 +181,7 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
             : "text-slate-500 hover:text-slate-700"
           }`}
         >
-          TỐI ƯU
+          OPTIMIZATION
         </button>
         {(userRole === "ADMIN" || userRole === "MANAGER") && (
           <button
@@ -191,7 +192,7 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
               : "text-rose-500 hover:text-rose-700 font-bold"
             }`}
           >
-            TÀI CHÍNH 💰
+            FINANCIAL 💰
           </button>
         )}
         {(userRole === "ADMIN" || userRole === "MANAGER") && (
@@ -203,7 +204,7 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
               : "text-indigo-500 hover:text-indigo-700 font-bold"
             }`}
           >
-            HỢP NHẤT CHIẾN LƯỢC ✨
+            STRATEGIC REMIX ✨
           </button>
         )}
       </div>
@@ -211,7 +212,7 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-40 space-y-4">
           <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Đang tổng hợp dữ liệu...</p>
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Aggregating data...</p>
         </div>
       ) : data ? (
         <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
@@ -220,30 +221,30 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
           {activeTab === "OVERVIEW" ? (
             <div className="space-y-8">
               <div className="px-2 border-l-4 border-blue-600 pl-4">
-                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Thống kê chi tiết ({data.period.label})</h3>
-                <p className="text-slate-500 text-sm font-medium">Phân bổ ticket và hiệu suất xử lý trong kỳ</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Detailed Statistics ({data.period.label})</h3>
+                <p className="text-slate-500 text-sm font-medium">Ticket distribution and processing performance in period</p>
               </div>
 
               {/* Trend Chart */}
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="mb-6">
-                  <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Biểu đồ xu hướng (Trend)</h4>
-                  <p className="text-xs text-slate-500">Số lượng Ticket và Giờ làm thực tế qua từng tháng</p>
+                  <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Trend Chart</h4>
+                  <p className="text-xs text-slate-500">Ticket volume and actual hours over months</p>
                 </div>
                 <TrendChart data={data.current.trendData} />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
-                  <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Trạng thái Ticket</h4>
+                  <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Ticket Status</h4>
                   <DoneRateChart data={data} />
                   <div className="mt-4 text-center">
                     <span className="text-3xl font-black text-slate-900 dark:text-white">{data.current.completionRate.toFixed(1)}%</span>
-                    <p className="text-sm text-slate-500">Tỷ lệ hoàn thành trong kỳ</p>
+                    <p className="text-sm text-slate-500">Completion rate in period</p>
                   </div>
                 </div>
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
-                  <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Phân loại Yêu cầu</h4>
+                  <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Request Categories</h4>
                   <TypeDistributionChart data={data} />
                 </div>
               </div>
@@ -252,8 +253,8 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
                 <div className="flex justify-between items-center mb-8">
                   <div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">HIỆU SUẤT NHÂN SỰ (SRO)</h3>
-                    <p className="text-slate-500 text-sm font-medium">Đối soát Dự toán (Est) vs Thực tế (Act) từng nhân sự</p>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">PERSONNEL PERFORMANCE (SRO)</h3>
+                    <p className="text-slate-500 text-sm font-medium">Estimate vs Actual crosscheck per personnel</p>
                   </div>
                   <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-3 py-1 rounded-full uppercase tracking-widest">Efficiency View</span>
                 </div>
@@ -265,18 +266,18 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
               {/* Comparative Growth Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <GrowthCard 
-                  title="Tăng trưởng Ticket" 
+                  title="Ticket Growth" 
                   qoq={data.comparison.qoq.ticketsChange} 
                   yoy={data.comparison.yoy.ticketsChange}
                 />
                 <GrowthCard 
-                  title="Biến động Giờ (Act)" 
+                  title="Hours Fluctuation (Act)" 
                   qoq={data.comparison.qoq.hoursChange} 
                   yoy={data.comparison.yoy.hoursChange}
                   color="emerald"
                 />
                 <GrowthCard 
-                  title="Hiệu suất xử lý" 
+                  title="Processing Efficiency" 
                   qoq={data.comparison.qoq.completionRateChange || 0} 
                   yoy={data.comparison.yoy.completionRateChange || 0}
                   color="indigo"
@@ -285,8 +286,8 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
 
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="mb-8 px-2 border-l-4 border-blue-600 pl-4">
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Biểu đồ so sánh hiệu suất</h3>
-                  <p className="text-slate-500 text-sm font-medium">So sánh Kỳ này vs Kỳ trước (QoQ) vs Cùng kỳ năm ngoái (YoY)</p>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Performance Comparison Chart</h3>
+                  <p className="text-slate-500 text-sm font-medium">Current Period vs Last Period (QoQ) vs Same Period Last Year (YoY)</p>
                 </div>
                 <ComparisonChart data={data} />
               </div>
@@ -295,8 +296,8 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
             <div className="space-y-8">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
                 <div className="mb-8 px-2 border-l-4 border-amber-500 pl-4">
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Phân tích hiệu quả danh mục SRO</h3>
-                  <p className="text-slate-500 text-sm font-medium">Đối soát tần suất sử dụng thực tế để tối ưu hợp đồng năm tới</p>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">SRO Portfolio Efficiency Analysis</h3>
+                  <p className="text-slate-500 text-sm font-medium">Crosscheck actual usage frequency to optimize contracts next year</p>
                 </div>
                 <SROUsageTable data={data.current.sroUsageAnalysis} />
               </div>
@@ -351,8 +352,8 @@ function GrowthCard({ title, qoq, yoy, color = "blue" }: any) {
     <div className={`p-8 rounded-[32px] border ${colors[color]} space-y-6 transition-all hover:shadow-lg`}>
       <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">{title}</p>
       <div className="grid grid-cols-2 gap-8 border-t border-current/10 pt-6">
-        <Badge value={qoq} label="vs Kỳ trước (QoQ)" />
-        <Badge value={yoy} label="vs Cùng kỳ (YoY)" />
+        <Badge value={qoq} label="vs Last Period (QoQ)" />
+        <Badge value={yoy} label="vs Same Period (YoY)" />
       </div>
     </div>
   );

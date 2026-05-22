@@ -48,14 +48,14 @@ export async function deleteUser(userId: string) {
     revalidatePath("/admin/users");
     return { success: true };
   } catch (error: any) {
-    return { error: "Không thể xóa user này do đã có dữ liệu liên quan (Request/WorkLog)." };
+    return { error: "Cannot delete this user due to associated data (Request/WorkLog)." };
   }
 }
 
 export async function createUser(data: { username: string, name: string, role: string, password?: string }) {
   try {
     const existing = await prisma.user.findUnique({ where: { username: data.username } });
-    if (existing) return { error: "Username này đã tồn tại trên hệ thống." };
+    if (existing) return { error: "This username already exists in the system." };
 
     const hashedPassword = await bcrypt.hash(data.password || "password123", 10);
 
@@ -90,16 +90,16 @@ export async function resetUserPassword(userId: string, newPassword?: string) {
 export async function changeMyPassword(oldPassword: string, newPassword: string) {
   try {
     const session = await auth();
-    if (!session?.user?.id) return { error: "Bạn chưa đăng nhập" };
+    if (!session?.user?.id) return { error: "You are not logged in" };
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id }
     });
 
-    if (!user || !user.password) return { error: "Tài khoản không tồn tại" };
+    if (!user || !user.password) return { error: "Account does not exist" };
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) return { error: "Mật khẩu hiện tại không đúng" };
+    if (!isMatch) return { error: "Current password is incorrect" };
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     

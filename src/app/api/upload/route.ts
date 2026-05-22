@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
           requestId,
           userId: session.user?.id,
           action: "UPLOAD_EVIDENCE",
-          details: `Tải lên file: ${file.name}`,
+          details: `Uploaded file: ${file.name}`,
         }
       });
 

@@ -66,7 +66,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
           {board.name}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-          Bảng quản lý riêng biệt cho {board.filterType || "tất cả yêu cầu"}
+          Dedicated management board for {board.filterType || "all requests"}
         </p>
       </div>
 

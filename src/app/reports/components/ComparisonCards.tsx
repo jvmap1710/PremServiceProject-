@@ -13,7 +13,7 @@ export function ComparisonCards({ data }: ComparisonCardsProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {/* Total Tickets */}
       <Card 
-        title="Tổng số Ticket" 
+        title="Total Tickets" 
         value={current.totalTickets} 
         icon={<Ticket className="w-6 h-6 text-blue-600" />}
         qoq={comparison.qoq.ticketsChange}
@@ -22,7 +22,7 @@ export function ComparisonCards({ data }: ComparisonCardsProps) {
 
       {/* Actual Hours */}
       <Card 
-        title="Giờ thực hiện (Act)" 
+        title="Actual Hours (Act)" 
         value={`${current.totalActualHours.toFixed(1)}h`} 
         icon={<Clock className="w-6 h-6 text-emerald-600" />}
         qoq={comparison.qoq.hoursChange}
@@ -31,18 +31,18 @@ export function ComparisonCards({ data }: ComparisonCardsProps) {
 
       {/* Estimate Hours Comparison */}
       <Card 
-        title="Dự toán (Est vs Act)" 
+        title="Estimated vs Actual" 
         value={`${current.totalEstimatedHours.toFixed(1)}h`} 
         icon={<TrendingUp className="w-6 h-6 text-amber-600" />}
-        subtitle={`Sử dụng ${(current.totalActualHours / (current.totalEstimatedHours || 1) * 100).toFixed(1)}% quỹ giờ (${current.totalActualHours.toFixed(1)}h Act / ${current.totalEstimatedHours.toFixed(1)}h Est)`}
+        subtitle={`Used ${(current.totalActualHours / (current.totalEstimatedHours || 1) * 100).toFixed(1)}% of allocated hours (${current.totalActualHours.toFixed(1)}h Act / ${current.totalEstimatedHours.toFixed(1)}h Est)`}
       />
 
       {/* SLA Compliance */}
       <Card 
-        title="Tỷ lệ đạt SLA" 
+        title="SLA Compliance Rate" 
         value={`${current.slaComplianceRate.toFixed(1)}%`} 
         icon={<CheckCircle2 className="w-6 h-6 text-indigo-600" />}
-        subtitle={`Hoàn thành đúng hạn ${current.slaComplianceRate === 100 ? "tuyệt đối" : "ổn định"}`}
+        subtitle={`Completed on time ${current.slaComplianceRate === 100 ? "perfectly" : "stably"}`}
       />
     </div>
   );
@@ -63,8 +63,8 @@ function Card({ title, value, icon, qoq, yoy, subtitle }: any) {
 
       {(qoq !== undefined || yoy !== undefined) ? (
         <div className="pt-4 border-t border-slate-50 dark:border-slate-800 flex gap-4">
-          {qoq !== undefined && <Badge label="vs Kỳ trước" value={qoq} />}
-          {yoy !== undefined && <Badge label="vs Cùng kỳ" value={yoy} />}
+          {qoq !== undefined && <Badge label="vs Last Period" value={qoq} />}
+          {yoy !== undefined && <Badge label="vs Same Period" value={yoy} />}
         </div>
       ) : subtitle && (
         <div className="pt-4 border-t border-slate-50 dark:border-slate-800">

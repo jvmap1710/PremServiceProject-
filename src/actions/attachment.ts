@@ -22,7 +22,7 @@ export async function deleteAttachment(id: string, requestId: string) {
           requestId,
           userId: session.user?.id,
           action: "DELETE_EVIDENCE",
-          details: `Xóa file: ${attachment.filename}`,
+          details: `Deleted file: ${attachment.filename}`,
         },
       }),
     ]);

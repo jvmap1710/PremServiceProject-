@@ -43,7 +43,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  // Lấy dữ liệu để truyền vào RequestForm (Edit mode)
+  // Fetch data to pass into RequestForm (Edit mode)
   const clients = await prisma.client.findMany({
     where: { isActive: true },
     include: {
@@ -53,7 +53,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     }
   });
 
-  // Lấy TOÀN BỘ danh sách user để đảm bảo không bị sót role nào
+  // Fetch ENTIRE user list to ensure no role is missed
   const users = await prisma.user.findMany({
     where: {
       role: { in: ["ADMIN", "TAS", "IMP_ENGINEER"] }
@@ -62,7 +62,7 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     orderBy: { name: 'asc' }
   });
 
-  // Lấy danh sách cột Kanban để hiển thị status
+  // Fetch Kanban columns to display status
   const kanbanColumns = await prisma.kanbanColumn.findMany({
     orderBy: { order: 'asc' }
   });

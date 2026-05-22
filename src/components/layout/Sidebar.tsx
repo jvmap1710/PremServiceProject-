@@ -62,7 +62,7 @@ export function Sidebar({ role, initialBoards = [] }: SidebarProps) {
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="hidden lg:flex p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all ml-2"
-          title={isCollapsed ? "Mở rộng" : "Thu gọn"}
+          title={isCollapsed ? "Expand" : "Collapse"}
         >
           <ChevronRight className={cn("w-4 h-4 transition-transform duration-300", !isCollapsed && "rotate-180")} />
         </button>
@@ -78,7 +78,7 @@ export function Sidebar({ role, initialBoards = [] }: SidebarProps) {
             <div key={item.href}>
               {showHeader && !isCollapsed && (
                 <div className="pt-6 pb-2 px-3">
-                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Quản trị hệ thống</p>
+                  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">System Administration</p>
                 </div>
               )}
               {showHeader && isCollapsed && <div className="h-px bg-slate-100 dark:bg-slate-800 my-4" />}
@@ -102,16 +102,16 @@ export function Sidebar({ role, initialBoards = [] }: SidebarProps) {
 
         {!isCollapsed && (
           <div className="pt-8 pb-2 px-3 flex justify-between items-center group">
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Công việc của tôi</p>
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">My Tasks</p>
           </div>
         )}
         {isCollapsed && <div className="h-px bg-slate-100 dark:bg-slate-800 my-4" />}
         <SidebarTasks isCollapsed={isCollapsed} onItemClick={() => setIsOpen(false)} />
       </nav>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Công việc của tôi" maxWidth="max-w-md">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="My Tasks" maxWidth="max-w-md">
         <div className="p-6">
-          <p className="text-sm text-slate-500">Đây là danh sách các yêu cầu đang được giao cho bạn hoặc thuộc khách hàng bạn quản lý.</p>
+          <p className="text-sm text-slate-500">This is the list of requests currently assigned to you or belonging to clients you manage.</p>
         </div>
       </Modal>
     </div>

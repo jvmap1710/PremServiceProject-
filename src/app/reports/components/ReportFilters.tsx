@@ -42,8 +42,8 @@ export function ReportFilters({
   setCustomEnd
 }: ReportFiltersProps) {
   const years = [2024, 2025, 2026];
-  const months = Array.from({ length: 12 }, (_, i) => ({ v: i + 1, l: `Tháng ${i + 1}` }));
-  const quarters = [1, 2, 3, 4].map(v => ({ v, l: `Quý ${v}` }));
+  const months = Array.from({ length: 12 }, (_, i) => ({ v: i + 1, l: `Month ${i + 1}` }));
+  const quarters = [1, 2, 3, 4].map(v => ({ v, l: `Quarter ${v}` }));
 
   const handleYearStartChange = (newYear: number) => {
     setYearStart(newYear);
@@ -69,7 +69,7 @@ export function ReportFilters({
           onChange={(e) => setSelectedClientId(e.target.value)}
           className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
         >
-          <option value="all" className="dark:bg-slate-900">Tất cả khách hàng</option>
+          <option value="all" className="dark:bg-slate-900">All Clients</option>
           {clients.map(c => (
             <option key={c.id} value={c.id} className="dark:bg-slate-900">{c.name}</option>
           ))}
@@ -88,10 +88,10 @@ export function ReportFilters({
           }}
           className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
         >
-          <option value="MONTH" className="dark:bg-slate-900">Theo Khoảng Tháng</option>
-          <option value="QUARTER" className="dark:bg-slate-900">Theo Khoảng Quý</option>
-          <option value="YEAR" className="dark:bg-slate-900">Theo Khoảng Năm</option>
-          <option value="CUSTOM" className="dark:bg-slate-900">Tùy chọn ngày (From-To)</option>
+          <option value="MONTH" className="dark:bg-slate-900">By Month Range</option>
+          <option value="QUARTER" className="dark:bg-slate-900">By Quarter Range</option>
+          <option value="YEAR" className="dark:bg-slate-900">By Year Range</option>
+          <option value="CUSTOM" className="dark:bg-slate-900">Custom Range (From-To)</option>
         </select>
       </div>
 
@@ -99,7 +99,7 @@ export function ReportFilters({
       {periodType === "CUSTOM" ? (
         <div className="flex items-center gap-4 animate-in slide-in-from-left-2 duration-300">
            <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] font-black text-slate-400 uppercase">Từ</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase">From</span>
             <input 
               type="date" 
               value={customStart}
@@ -108,7 +108,7 @@ export function ReportFilters({
             />
           </div>
           <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] font-black text-slate-400 uppercase">Đến</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase">To</span>
             <input 
               type="date" 
               value={customEnd}
@@ -122,7 +122,7 @@ export function ReportFilters({
         <>
           {/* FROM */}
           <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] font-black text-slate-400 uppercase">Từ</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase">From</span>
             {periodType !== "YEAR" && (
               <select 
                 value={periodValueStart}
@@ -149,7 +149,7 @@ export function ReportFilters({
 
           {/* TO */}
           <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] font-black text-slate-400 uppercase">Đến</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase">To</span>
             {periodType !== "YEAR" && (
               <select 
                 value={periodValueEnd}

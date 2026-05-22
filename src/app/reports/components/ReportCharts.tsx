@@ -29,7 +29,7 @@ export function TrendChart({ data }: { data: any[] }) {
             yAxisId="left"
             type="monotone" 
             dataKey="tickets" 
-            name="Số lượng Ticket"
+            name="Number of Tickets"
             stroke="#3b82f6" 
             strokeWidth={3}
             dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
@@ -39,7 +39,7 @@ export function TrendChart({ data }: { data: any[] }) {
             yAxisId="right"
             type="monotone" 
             dataKey="hours" 
-            name="Số giờ thực tế"
+            name="Actual Hours"
             stroke="#10b981" 
             strokeWidth={3}
             dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
@@ -60,31 +60,31 @@ export function ComparisonChart({ data }: ComparisonChartProps) {
 
   const chartData = [
     {
-      name: "Tổng Ticket",
-      "Kỳ này": data.current.totalTickets,
-      "Kỳ trước": data.current.totalTickets / (1 + data.comparison.qoq.ticketsChange / 100),
-      "Cùng kỳ": data.current.totalTickets / (1 + data.comparison.yoy.ticketsChange / 100),
+      name: "Total Tickets",
+      "Current Period": data.current.totalTickets,
+      "Previous Period": data.current.totalTickets / (1 + data.comparison.qoq.ticketsChange / 100),
+      "Same Period YoY": data.current.totalTickets / (1 + data.comparison.yoy.ticketsChange / 100),
     },
     {
-      name: "Số giờ (h)",
-      "Kỳ này": data.current.totalActualHours,
-      "Kỳ trước": data.current.totalActualHours / (1 + data.comparison.qoq.hoursChange / 100),
-      "Cùng kỳ": data.current.totalActualHours / (1 + data.comparison.yoy.hoursChange / 100),
+      name: "Hours (h)",
+      "Current Period": data.current.totalActualHours,
+      "Previous Period": data.current.totalActualHours / (1 + data.comparison.qoq.hoursChange / 100),
+      "Same Period YoY": data.current.totalActualHours / (1 + data.comparison.yoy.hoursChange / 100),
     },
     {
-      name: "Giờ/Ticket",
-      "Kỳ này": data.current.totalTickets > 0 ? data.current.totalActualHours / data.current.totalTickets : 0,
-      "Kỳ trước": (data.current.totalActualHours / (1 + data.comparison.qoq.hoursChange / 100)) / (data.current.totalTickets / (1 + data.comparison.qoq.ticketsChange / 100) || 1),
-      "Cùng kỳ": (data.current.totalActualHours / (1 + data.comparison.yoy.hoursChange / 100)) / (data.current.totalTickets / (1 + data.comparison.yoy.ticketsChange / 100) || 1),
+      name: "Hours/Ticket",
+      "Current Period": data.current.totalTickets > 0 ? data.current.totalActualHours / data.current.totalTickets : 0,
+      "Previous Period": (data.current.totalActualHours / (1 + data.comparison.qoq.hoursChange / 100)) / (data.current.totalTickets / (1 + data.comparison.qoq.ticketsChange / 100) || 1),
+      "Same Period YoY": (data.current.totalActualHours / (1 + data.comparison.yoy.hoursChange / 100)) / (data.current.totalTickets / (1 + data.comparison.yoy.ticketsChange / 100) || 1),
     }
   ];
 
   // Helper to round numbers for display
   const processedData = chartData.map(item => ({
     ...item,
-    "Kỳ này": Math.round((item["Kỳ này"] as number) * 10) / 10,
-    "Kỳ trước": Math.round((item["Kỳ trước"] as number) * 10) / 10,
-    "Cùng kỳ": Math.round((item["Cùng kỳ"] as number) * 10) / 10,
+    "Current Period": Math.round((item["Current Period"] as number) * 10) / 10,
+    "Previous Period": Math.round((item["Previous Period"] as number) * 10) / 10,
+    "Same Period YoY": Math.round((item["Same Period YoY"] as number) * 10) / 10,
   }));
 
   const COLORS = {
@@ -111,14 +111,14 @@ export function ComparisonChart({ data }: ComparisonChartProps) {
             cursor={{ fill: '#f8fafc' }}
           />
           <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px' }} />
-          <Bar dataKey="Kỳ này" fill={COLORS.current} radius={[6, 6, 0, 0]} barSize={40}>
-            <LabelList dataKey="Kỳ này" position="top" style={{ fontSize: 10, fontWeight: 700, fill: COLORS.current }} />
+          <Bar dataKey="Current Period" fill={COLORS.current} radius={[6, 6, 0, 0]} barSize={40}>
+            <LabelList dataKey="Current Period" position="top" style={{ fontSize: 10, fontWeight: 700, fill: COLORS.current }} />
           </Bar>
-          <Bar dataKey="Kỳ trước" fill={COLORS.previous} radius={[6, 6, 0, 0]} barSize={40}>
-             <LabelList dataKey="Kỳ trước" position="top" style={{ fontSize: 10, fontWeight: 700, fill: COLORS.previous }} />
+          <Bar dataKey="Previous Period" fill={COLORS.previous} radius={[6, 6, 0, 0]} barSize={40}>
+             <LabelList dataKey="Previous Period" position="top" style={{ fontSize: 10, fontWeight: 700, fill: COLORS.previous }} />
           </Bar>
-          <Bar dataKey="Cùng kỳ" fill={COLORS.yoy} radius={[6, 6, 0, 0]} barSize={40}>
-             <LabelList dataKey="Cùng kỳ" position="top" style={{ fontSize: 10, fontWeight: 700, fill: COLORS.yoy }} />
+          <Bar dataKey="Same Period YoY" fill={COLORS.yoy} radius={[6, 6, 0, 0]} barSize={40}>
+             <LabelList dataKey="Same Period YoY" position="top" style={{ fontSize: 10, fontWeight: 700, fill: COLORS.yoy }} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -158,8 +158,8 @@ export function TypeDistributionChart({ data }: { data: any }) {
 export function DoneRateChart({ data }: { data: any }) {
   if (!data) return null;
   const pieData = [
-    { name: "Hoàn thành", value: data.current.doneTickets },
-    { name: "Chưa xong", value: data.current.totalTickets - data.current.doneTickets },
+    { name: "Completed", value: data.current.doneTickets },
+    { name: "Incomplete", value: data.current.totalTickets - data.current.doneTickets },
   ];
   const COLORS = ["#10b981", "#e2e8f0"];
 

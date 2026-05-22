@@ -12,6 +12,9 @@ test.describe('Service Request Creation', () => {
     }
     // Đợi trang chính load xong
     await expect(page.locator('h1')).toContainText('Dashboard Overview', { timeout: 30000 });
+    await page.goto('/requests');
+    await expect(page.locator('h1')).toContainText('Danh sách yêu cầu dịch vụ', { timeout: 20000 });
+    await page.waitForTimeout(2000);
   });
 
   test('should show error when creating request with missing data (Zod Validation)', async ({ page }) => {
@@ -31,9 +34,9 @@ test.describe('Service Request Creation', () => {
     await page.click('text=Tạo yêu cầu mới');
     await expect(page.locator('text=Tiếp nhận yêu cầu mới')).toBeVisible();
     
-    // Chọn khách hàng bằng Regex cho linh hoạt
+    // Chọn khách hàng bằng tên chính xác để hợp lệ với TypeScript type
     const clientSelect = page.locator('select').first();
-    await clientSelect.selectOption({ label: /BIDV-SuMi/ });
+    await clientSelect.selectOption({ label: 'BIDV-SuMi TRUST Leasing Company (BSL)' });
     
     await page.fill('input[placeholder="Tên yêu cầu ngắn gọn..."]', 'E2E Automated Test Request');
     await page.fill('textarea[placeholder="Mô tả kỹ thuật chi tiết..."]', 'This is a description from Playwright E2E test.');

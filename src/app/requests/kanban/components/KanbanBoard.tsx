@@ -31,13 +31,13 @@ import {
 } from "@/actions/kanban";
 
 const COLUMN_COLORS = [
-  "#64748b", // Slate (Trầm)
-  "#2563eb", // Blue (Đậm)
-  "#059669", // Emerald (Xanh lá đậm)
-  "#d97706", // Amber (Vàng cam)
-  "#dc2626", // Red (Đỏ)
-  "#7c3aed", // Violet (Tím)
-  "#db2777", // Pink (Hồng)
+  "#64748b", // Slate
+  "#2563eb", // Blue
+  "#059669", // Emerald
+  "#d97706", // Amber
+  "#dc2626", // Red
+  "#7c3aed", // Violet
+  "#db2777", // Pink
 ];
 
 export function KanbanBoard({ 
@@ -114,7 +114,25 @@ export function KanbanBoard({
       
       let matchMine = true;
       if (filterMyTasks && currentUser?.id) {
-        matchMine = r.assigneeId === currentUser.id || r.client?.ownerId === currentUser.id;
+        const isDev = currentUser.role === "DEV" || currentUser.role === "IMP_ENGINEER";
+        const isTas = currentUser.role === "TAS";
+        
+        const isAssigned = r.assigneeId === currentUser.id || 
+          (r.assigneeIds && r.assigneeIds.split(',').map((id: string) => id.trim()).includes(currentUser.id));
+
+        if (isDev) {
+          // DEV sees assigned tasks
+          matchMine = isAssigned;
+        } else if (isTas) {
+          // TAS sees tasks created by them or clients they own
+          matchMine = r.createdById === currentUser.id || r.client?.ownerId === currentUser.id;
+        } else {
+          // ADMIN sees everything related to them
+          matchMine = 
+            isAssigned || 
+            r.createdById === currentUser.id || 
+            r.client?.ownerId === currentUser.id;
+        }
       }
 
       return matchSearch && matchClient && matchPackage && matchType && matchMine;
@@ -150,32 +168,32 @@ export function KanbanBoard({
       setColumns([...columns, result.col]);
       setNewColumnTitle("");
       setIsAddingColumn(false);
-      toast.success("Đã thêm danh sách mới");
+      toast.success("Added new list successfully");
     }
   };
 
   const handleDeleteColumn = async (id: string, statusKey: string) => {
-    if (["TODO", "IN_PROGRESS", "DONE"].includes(statusKey.toUpperCase())) {
-      toast.error("Không thể xóa các cột mặc định");
+    if (["TODO", "IN_PROGRESS", "DONE", "PAUSED", "CLOSED"].includes(statusKey.toUpperCase())) {
+      toast.error("Default columns cannot be deleted");
       return;
     }
 
-    const isConfirmed = window.confirm("Bạn có chắc chắn muốn xóa danh sách này? Các yêu cầu trong cột sẽ không bị mất nhưng bạn sẽ không thấy chúng trên bảng Kanban này nữa.");
+    const isConfirmed = window.confirm("Are you sure you want to delete this list? Requests in the column will not be lost but they will no longer be visible on this Kanban board.");
     
     if (isConfirmed) {
       const colTitle = getColTitle(columns.find(c => c.id === id));
-      const confirmName = window.prompt(`Để xác nhận xóa, vui lòng nhập chính xác tên cột "${colTitle}":`);
+      const confirmName = window.prompt(`To confirm deletion, please enter the exact column name "${colTitle}":`);
       
       if (confirmName && confirmName.trim().toLowerCase() === colTitle.toLowerCase()) {
         const result = await deleteKanbanColumn(id);
         if (result.success) {
           setColumns(columns.filter(c => c.id !== id));
-          toast.success("Đã xóa danh sách");
+          toast.success("List deleted successfully");
         } else if (result.error) {
-          toast.error("Lỗi khi xóa: " + result.error);
+          toast.error("Delete error: " + result.error);
         }
       } else if (confirmName !== null) {
-        toast.error("Tên xác nhận không chính xác");
+        toast.error("Confirmation name is incorrect");
       }
     }
   };
@@ -269,7 +287,7 @@ export function KanbanBoard({
         setRequests(prev => prev.map(r => r.id === activeId ? { ...r, status: dragOriginalStatus.current! } : r));
         toast.error(result.error);
       } else {
-        toast.success("Cập nhật trạng thái thành công");
+        toast.success("Status updated successfully");
       }
     }
 
@@ -277,9 +295,11 @@ export function KanbanBoard({
   };
 
   const getColTitle = (col: any) => {
-    if (col.statusKey === "TODO") return "Cần làm";
-    if (col.statusKey === "IN_PROGRESS") return "Đang xử lý";
-    if (col.statusKey === "DONE") return "Hoàn thành";
+    if (col.statusKey === "TODO") return "Received";
+    if (col.statusKey === "IN_PROGRESS") return "In Progress";
+    if (col.statusKey === "DONE") return "Completed";
+    if (col.statusKey === "PAUSED") return "On Hold";
+    if (col.statusKey === "CLOSED") return "Closed";
     return col.title;
   };
 
@@ -309,93 +329,86 @@ export function KanbanBoard({
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-50/30 dark:bg-slate-950/30 rounded-[24px] md:rounded-[40px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-inner">
-      {/* Toolbar */}
-      <div className="p-3 md:p-6 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-          <div className="relative group flex-1 md:flex-none">
-            <Search className="w-4 h-4 absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-            <input 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm mã hoặc tiêu đề..."
-              className="pl-9 md:pl-11 pr-4 py-2 md:py-2.5 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 rounded-xl md:rounded-2xl text-sm outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-200 dark:focus:border-indigo-800 transition-all w-full md:w-64 font-semibold text-slate-900 dark:text-slate-100 placeholder:font-medium"
-            />
-
-          </div>
-
-
-          <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 bg-slate-50 dark:bg-slate-950/50 rounded-xl md:rounded-2xl border border-slate-100 dark:border-slate-800">
-            <User className="w-4 h-4 text-slate-400 shrink-0" />
-            <select 
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              className="bg-transparent text-xs md:text-sm font-bold text-slate-600 dark:text-slate-400 outline-none cursor-pointer"
-            >
-
-              <option value="all" className="dark:bg-slate-900">Khách hàng</option>
-              {clients.map(c => (
-                <option key={c.id} value={c.id} className="dark:bg-slate-900">{c.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 bg-slate-50 dark:bg-slate-950/50 rounded-xl md:rounded-2xl border border-slate-100 dark:border-slate-800">
-            <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-            <select 
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="bg-transparent text-xs md:text-sm font-bold text-slate-600 dark:text-slate-400 outline-none cursor-pointer"
-            >
-
-              <option value="all" className="dark:bg-slate-900">Loại Ticket</option>
-              <option value="TASK" className="dark:bg-slate-900">📋 Công việc</option>
-              <option value="BUG" className="dark:bg-slate-900">🐞 Lỗi hệ thống</option>
-              <option value="FEATURE" className="dark:bg-slate-900">🚀 Tính năng mới</option>
-              <option value="URGENT" className="dark:bg-slate-900">⚠️ Khẩn cấp</option>
-            </select>
-          </div>
-
-          <button 
-            onClick={() => setFilterMyTasks(!filterMyTasks)}
-            className={`flex items-center gap-2 px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl border transition-all ${
-              filterMyTasks 
-              ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200 dark:shadow-none" 
-              : "bg-slate-50 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-slate-100"
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Việc của tôi</span>
-          </button>
+    <div className="h-full flex flex-col bg-slate-50/30 dark:bg-slate-950/30 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+      {/* Toolbar — compact single row, no wrap */}
+      <div className="px-3 py-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 min-w-0 overflow-x-auto scrollbar-hide">
+        {/* Search */}
+        <div className="relative shrink-0">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search ticket..."
+            className="pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-500/10 transition-all w-36"
+          />
         </div>
 
-        {(selectedClientId !== "all" || selectedPackageId !== "all" || selectedType !== "all" || searchQuery) && (
-          <button 
-            onClick={() => {
-              setSelectedClientId("all");
-              setSelectedPackageId("all");
-              setSelectedType("all");
-              setSearchQuery("");
-              setFilterMyTasks(false);
-            }}
-            className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:underline px-2"
+        {/* Client filter */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700 rounded-lg shrink-0">
+          <User className="w-3 h-3 text-slate-400" />
+          <select
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className="bg-transparent text-xs font-bold text-slate-600 dark:text-slate-400 outline-none cursor-pointer max-w-[110px]"
           >
-            Xóa lọc
+            <option value="all" className="dark:bg-slate-900">Clients</option>
+            {clients.map(c => (
+              <option key={c.id} value={c.id} className="dark:bg-slate-900">{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Type filter */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700 rounded-lg shrink-0">
+          <Filter className="w-3 h-3 text-slate-400" />
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            className="bg-transparent text-xs font-bold text-slate-600 dark:text-slate-400 outline-none cursor-pointer max-w-[100px]"
+          >
+            <option value="all" className="dark:bg-slate-900">Ticket Type</option>
+            <option value="INCIDENT" className="dark:bg-slate-900">Incident</option>
+            <option value="PROBLEM" className="dark:bg-slate-900">Problem</option>
+            <option value="SRO" className="dark:bg-slate-900">SRO</option>
+            <option value="NSRO" className="dark:bg-slate-900">NSRO</option>
+            <option value="OTHERS" className="dark:bg-slate-900">Others</option>
+            <option value="HEALTH_CHECK" className="dark:bg-slate-900">Health Check</option>
+          </select>
+        </div>
+
+        {/* My tasks toggle */}
+        <button
+          onClick={() => setFilterMyTasks(!filterMyTasks)}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all shrink-0 ${
+            filterMyTasks
+              ? 'bg-indigo-600 text-white border-indigo-600'
+              : 'bg-slate-50 dark:bg-slate-950/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+          }`}
+        >
+          <UserCheck className="w-3 h-3" />
+          <span className="text-[10px] font-black uppercase tracking-wider">My Tasks</span>
+        </button>
+
+        {/* Clear filters */}
+        {(selectedClientId !== 'all' || selectedPackageId !== 'all' || selectedType !== 'all' || searchQuery) && (
+          <button
+            onClick={() => { setSelectedClientId('all'); setSelectedPackageId('all'); setSelectedType('all'); setSearchQuery(''); setFilterMyTasks(false); }}
+            className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:underline shrink-0"
+          >
+            Clear filters
           </button>
         )}
 
-
-        {/* Add Column Button in Toolbar */}
+        {/* Add column — pushed to end */}
         {isAdmin && (
-          <button 
+          <button
             onClick={() => setIsAddingColumn(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20 ml-auto md:ml-0"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 transition-all ml-auto shrink-0"
           >
-            <Plus className="w-4 h-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Thêm cột</span>
+            <Plus className="w-3 h-3" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Add Column</span>
           </button>
         )}
-
       </div>
 
       {/* Mobile Tab Bar */}
@@ -424,7 +437,7 @@ export function KanbanBoard({
       </div>
 
       {/* Board Area */}
-      <div className="flex-1 min-h-0 overflow-x-auto p-2 md:p-4 custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-x-auto p-2 custom-scrollbar">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -445,6 +458,7 @@ export function KanbanBoard({
                   color={col.color || undefined}
                   isAdmin={isAdmin}
                   isReadOnly={isReadOnly}
+                  users={users}
                   onAddClick={() => {
                     if (isReadOnly) return;
                     setIsQuickAddOpen(true);
@@ -463,9 +477,9 @@ export function KanbanBoard({
           </div>
 
           {/* Desktop: horizontal scroll layout */}
-          <div className="hidden md:flex gap-4 h-full items-start">
+          <div className="hidden md:flex gap-3 h-full items-start">
             {columns.map((col) => (
-              <div key={col.id} className="relative group/col h-full flex flex-col pt-8">
+              <div key={col.id} className="relative group/col h-full flex flex-col pt-6">
                 {editingColId === col.id ? (
                    <div className="min-w-[320px] bg-white dark:bg-slate-900 p-6 rounded-[32px] border-2 border-indigo-500 shadow-2xl z-50 animate-in zoom-in-95">
                       <input 
@@ -475,8 +489,8 @@ export function KanbanBoard({
                         className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/50 rounded-2xl text-sm font-black outline-none mb-4 focus:ring-4 focus:ring-indigo-500/5 transition-all text-slate-900 dark:text-slate-100"
                       />
                       <div className="flex gap-3">
-                        <button onClick={() => handleRenameColumn(col.id)} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20">Lưu lại</button>
-                        <button onClick={() => setEditingColId(null)} className="flex-1 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest">Hủy</button>
+                        <button onClick={() => handleRenameColumn(col.id)} className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20">Save</button>
+                        <button onClick={() => setEditingColId(null)} className="flex-1 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest">Cancel</button>
                       </div>
 
                    </div>
@@ -490,6 +504,7 @@ export function KanbanBoard({
                       color={col.color || undefined}
                       isAdmin={isAdmin}
                       isReadOnly={isReadOnly}
+                      users={users}
                       onAddClick={() => {
                         if (isReadOnly) return;
                         setIsQuickAddOpen(true);
@@ -537,7 +552,7 @@ export function KanbanBoard({
           }}>
             {activeRequest ? (
               <div className="rotate-3 scale-105 shadow-2xl transition-transform w-[300px]">
-                <KanbanCard request={activeRequest} />
+                <KanbanCard request={activeRequest} users={users} />
               </div>
             ) : null}
           </DragOverlay>
@@ -548,8 +563,8 @@ export function KanbanBoard({
       <Modal 
         isOpen={!!detailRequestId} 
         onClose={() => setDetailRequestId(null)}
-        title={selectedRequest ? `YÊU CẦU: ${selectedRequest.code}` : "Chi tiết ticket"}
-        maxWidth="max-w-7xl"
+        title={selectedRequest ? `REQUEST: ${selectedRequest.code}` : "Ticket details"}
+        maxWidth="max-w-4xl"
       >
         {selectedRequest && (
           <RequestDetailView 
@@ -577,7 +592,7 @@ export function KanbanBoard({
       <Modal 
         isOpen={isAddingColumn} 
         onClose={() => setIsAddingColumn(false)} 
-        title="TẠO DANH MỤC CỘT MỚI"
+        title="CREATE NEW COLUMN"
         maxWidth="max-w-md"
       >
         <div className="space-y-4">
@@ -586,7 +601,7 @@ export function KanbanBoard({
             value={newColumnTitle}
             onChange={(e) => setNewColumnTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddColumn()}
-            placeholder="Nhập tên danh mục (VD: Test, Review...)"
+            placeholder="Enter column name (e.g. Test, Review...)"
             className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/5 transition-all text-slate-900 dark:text-slate-100"
           />
           <div className="flex gap-3">
@@ -594,14 +609,14 @@ export function KanbanBoard({
               onClick={handleAddColumn}
               className="flex-1 bg-indigo-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-indigo-500/20"
             >
-              Xác nhận tạo
+              Confirm
             </button>
 
             <button 
               onClick={() => setIsAddingColumn(false)}
               className="flex-1 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider"
             >
-              Hủy bỏ
+              Cancel
             </button>
           </div>
         </div>

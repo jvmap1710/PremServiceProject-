@@ -9,7 +9,7 @@ import { requestSchema } from "@/lib/validations";
 
 
 /**
- * Tự động deactive các gói đã hết hạn
+ * Auto-deactivate expired packages
  */
 async function deactivateExpiredPackages() {
   const now = new Date();
@@ -23,9 +23,19 @@ export type SROItem = { sroRuleId: string; quantity: number };
 
 export async function createServiceRequest(formData: FormData) {
   const session = await auth();
-  if (!session) return { error: "Bạn cần đăng nhập để tạo yêu cầu" };
+  if (!session) return { error: "You need to log in to create a request" };
 
   await deactivateExpiredPackages();
+
+  const assigneeIds = formData.get("assigneeIds") as string || null;
+  let formAssigneeId = formData.get("assigneeId") as string || null;
+  let formAssigneeIds = assigneeIds;
+  if (assigneeIds) {
+    const ids = assigneeIds.split(",").map(id => id.trim()).filter(Boolean);
+    formAssigneeId = ids.length > 0 ? ids[0] : null;
+  } else if (formAssigneeId) {
+    formAssigneeIds = formAssigneeId;
+  }
 
   // 1. Extract and Parse data
   const rawData = {
@@ -36,8 +46,11 @@ export async function createServiceRequest(formData: FormData) {
     description: formData.get("description") as string,
     type: formData.get("type") as string,
     priority: formData.get("priority") as string,
+    taskPriority: formData.get("taskPriority") as string || null,
+    urgency: formData.get("urgency") as string || null,
+    impact: formData.get("impact") as string || null,
     deadline: formData.get("deadline") as string || null,
-    assigneeId: formData.get("assigneeId") as string || null,
+    assigneeId: formAssigneeId,
     items: JSON.parse(formData.get("sroItems") as string || "[]")
   };
 
@@ -47,7 +60,18 @@ export async function createServiceRequest(formData: FormData) {
     return { error: validation.error.issues[0].message };
   }
 
-  const { clientId, packageId, title, userRequirement, description, type, priority, deadline, assigneeId, items: sroItems } = validation.data;
+  const { 
+    clientId, packageId, title, userRequirement, description, 
+    type, priority, deadline, assigneeId, items: sroItems, 
+    urgency, impact, taskPriority
+  } = validation.data;
+
+  // Only keep urgency and impact for INCIDENT and PROBLEM
+  const isIncidentOrProblem = type === "INCIDENT" || type === "PROBLEM";
+  const finalUrgency = isIncidentOrProblem ? urgency : null;
+  const finalImpact = isIncidentOrProblem ? impact : null;
+  const finalTaskPriority = taskPriority || "MEDIUM";
+
   const status = formData.get("status") as string || "TODO";
   const raiseDateStr = formData.get("raiseDate") as string;
 
@@ -57,7 +81,7 @@ export async function createServiceRequest(formData: FormData) {
       select: { code: true }
     });
 
-    if (!client) return { error: "Khách hàng không tồn tại" };
+    if (!client) return { error: "Client does not exist" };
 
     const lastRequest = await prisma.serviceRequest.findFirst({
       where: { clientId },
@@ -87,10 +111,14 @@ export async function createServiceRequest(formData: FormData) {
         userRequirement,
         description,
         status: status || "TODO",
-        type: type || "TASK",
-        priority,
+        type: type || "INCIDENT",
+        priority: priority || "P4",
+        taskPriority: finalTaskPriority,
+        urgency: finalUrgency,
+        impact: finalImpact,
         deadline: deadline ? new Date(deadline) : null,
         assigneeId: assigneeId || null,
+        assigneeIds: formAssigneeIds || null,
         createdById,
         raiseDate: raiseDateStr ? new Date(raiseDateStr) : new Date(),
         items: {
@@ -102,29 +130,35 @@ export async function createServiceRequest(formData: FormData) {
       }
     });
 
-    if (assigneeId) {
-      await createNotification({
-        userId: assigneeId,
-        title: "📌 Bạn đã được phân công yêu cầu mới",
-        message: `Yêu cầu: ${requestCode} - ${title}`,
-        type: "ASSIGNMENT",
-        link: `/requests/${request.id}`
-      });
+    if (formAssigneeIds) {
+      const ids = formAssigneeIds.split(",").map(id => id.trim()).filter(Boolean);
+      for (const uid of ids) {
+        await createNotification({
+          userId: uid,
+          title: "📌 You have been assigned a new request",
+          message: `Request: ${requestCode} - ${title}`,
+          type: "ASSIGNMENT",
+          link: `/requests/${request.id}`
+        });
+      }
     }
 
-    // Gửi thông báo Email
+    // Send Email notification
     try {
-      // Load thêm quan hệ để có data cho email
+      // Load additional relations for email data
       const requestWithClient = await prisma.serviceRequest.findUnique({
         where: { id: request.id },
         include: { client: true }
       });
       await NotificationService.notifyNewRequest(requestWithClient);
       
-      if (assigneeId) {
-        const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
-        if (assignee) {
-          await NotificationService.notifyAssignment(requestWithClient, assignee);
+      if (formAssigneeIds) {
+        const ids = formAssigneeIds.split(",").map(id => id.trim()).filter(Boolean);
+        for (const uid of ids) {
+          const assignee = await prisma.user.findUnique({ where: { id: uid } });
+          if (assignee) {
+            await NotificationService.notifyAssignment(requestWithClient, assignee);
+          }
         }
       }
     } catch (mailErr) {
@@ -136,7 +170,7 @@ export async function createServiceRequest(formData: FormData) {
     return { success: true, request };
   } catch (error: any) {
     console.error("Error creating Service Request:", error);
-    return { error: `Lỗi tạo yêu cầu: ${error.message || "Unknown error"}` };
+    return { error: `Error creating request: ${error.message || "Unknown error"}` };
   }
 }
 
@@ -147,55 +181,76 @@ export async function updateServiceRequest(id: string, formData: FormData) {
   const status = formData.get("status") as string;
   const type = formData.get("type") as string;
   const priority = formData.get("priority") as string;
+  const taskPriority = formData.get("taskPriority") as string;
+  const urgency = formData.get("urgency") as string;
+  const impact = formData.get("impact") as string;
   const deadline = formData.get("deadline") as string;
   const assigneeId = formData.get("assigneeId") as string;
+  const assigneeIds = formData.get("assigneeIds") as string;
+  const packageId = formData.get("packageId") as string;
   const raiseDateStr = formData.get("raiseDate") as string;
   const sroItemsJson = formData.get("sroItems");
 
   // Validation: Only if they are provided, they must not be empty
-  if (formData.has("title") && !title) return { error: "Tiêu đề không được để trống" };
-  if (formData.has("description") && !description) return { error: "Mô tả không được để trống" };
+  if (formData.has("title") && !title) return { error: "Title cannot be empty" };
+  if (formData.has("description") && !description) return { error: "Description cannot be empty" };
 
 
   try {
     const session = await auth();
-    if (!session) return { error: "Bạn cần đăng nhập" };
+    if (!session) return { error: "You need to log in" };
 
-    // Danh sách để gửi thông báo sau khi transaction thành công
+    // List of notifications to send after a successful transaction
     let pendingNotifications: any[] = [];
 
     await prisma.$transaction(async (tx) => {
       const currentRequest = await tx.serviceRequest.findUnique({
         where: { id },
-        select: { createdById: true, assigneeId: true, clientId: true, workLogs: { take: 1 } }
+        select: { createdById: true, assigneeId: true, assigneeIds: true, clientId: true, type: true, workLogs: { take: 1 } }
       });
 
-      if (!currentRequest) return { error: "Yêu cầu không tồn tại" };
+      if (!currentRequest) return { error: "Request does not exist" };
 
       const isCreator = currentRequest.createdById === session.user?.id;
-      const isAssignee = currentRequest.assigneeId === session.user?.id;
+      const isAssignee = currentRequest.assigneeId === session.user?.id || 
+        (currentRequest.assigneeIds && currentRequest.assigneeIds.split(",").map(id => id.trim()).includes(session.user?.id || ""));
       const isAdmin = session.user?.role === "ADMIN";
       const isTAS = session.user?.role === "TAS";
 
       // Security: Only related people can update
       if (!isCreator && !isAssignee && !isAdmin && !isTAS) {
-        throw new Error("Bạn không có quyền chỉnh sửa yêu cầu này");
+        throw new Error("You do not have permission to edit this request");
       }
 
-      // 1. Kiểm tra nếu muốn chuyển sang DONE
+      // 1. Check if moving to DONE
       if (status === "DONE") {
         if (!isAssignee && !isAdmin && !isTAS) {
-          throw new Error("Bạn không có quyền chuyển trạng thái yêu cầu này sang hoàn thành");
+          throw new Error("You do not have permission to mark this request as completed");
         }
 
         if (currentRequest.workLogs.length === 0) {
-          throw new Error("Bạn phải log job ít nhất một lần trước khi hoàn thành yêu cầu");
+          throw new Error("You must log at least one work entry before completing the request");
         }
       }
 
       const oldRequest = await tx.serviceRequest.findUnique({
         where: { id },
-        select: { assigneeId: true, code: true, title: true }
+        select: {
+          code: true,
+          title: true,
+          status: true,
+          type: true,
+          priority: true,
+          taskPriority: true,
+          urgency: true,
+          impact: true,
+          deadline: true,
+          assigneeId: true,
+          assigneeIds: true,
+          assignee: { select: { name: true } },
+          packageId: true,
+          package: { select: { name: true } }
+        }
       });
 
       const updateData: any = {};
@@ -205,21 +260,203 @@ export async function updateServiceRequest(id: string, formData: FormData) {
       if (formData.has("status")) updateData.status = status;
       if (formData.has("type")) updateData.type = type;
       if (formData.has("priority")) updateData.priority = priority;
+      if (formData.has("taskPriority")) updateData.taskPriority = taskPriority || null;
+      if (formData.has("urgency")) updateData.urgency = urgency || null;
+      if (formData.has("impact")) updateData.impact = impact || null;
       if (formData.has("deadline")) updateData.deadline = deadline ? new Date(deadline) : null;
-      if (formData.has("assigneeId")) updateData.assigneeId = assigneeId || null;
+      
+      if (formData.has("assigneeIds")) {
+        updateData.assigneeIds = assigneeIds || null;
+        const ids = (assigneeIds || "").split(",").map(id => id.trim()).filter(Boolean);
+        updateData.assigneeId = ids.length > 0 ? ids[0] : null;
+      } else if (formData.has("assigneeId")) {
+        updateData.assigneeId = assigneeId || null;
+        updateData.assigneeIds = assigneeId || null;
+      }
+
+      if (formData.has("packageId") && packageId) {
+        updateData.packageId = packageId;
+        const pkg = await tx.premiumPackage.findUnique({
+          where: { id: packageId },
+          select: { clientId: true }
+        });
+        if (pkg) {
+          updateData.clientId = pkg.clientId;
+        }
+      }
+
       if (formData.has("raiseDate")) updateData.raiseDate = raiseDateStr ? new Date(raiseDateStr) : undefined;
+
+      // Reset urgency/impact if ticket type becomes something other than INCIDENT or PROBLEM
+      const finalType = formData.has("type") ? type : currentRequest.type;
+      if (finalType !== "INCIDENT" && finalType !== "PROBLEM") {
+        updateData.urgency = null;
+        updateData.impact = null;
+        // Default to P4 only if transitioning type from Incident/Problem to non-Incident/Problem
+        // and a new priority value is not explicitly specified in the request.
+        if (formData.has("type") && currentRequest.type !== type && !formData.has("priority")) {
+          updateData.priority = "P4";
+        }
+      }
 
       await tx.serviceRequest.update({
         where: { id },
         data: updateData
       });
 
-      // Gom thông báo lại để xử lý sau
-      if (updateData.assigneeId && updateData.assigneeId !== oldRequest?.assigneeId) {
+      // Compare and log changes to AuditLog
+      if (oldRequest) {
+        const changes: string[] = [];
+
+        if (updateData.hasOwnProperty("title") && updateData.title !== oldRequest.title) {
+          changes.push(`Changed title from "${oldRequest.title}" to "${updateData.title}"`);
+        }
+        if (updateData.hasOwnProperty("status") && updateData.status !== oldRequest.status) {
+          const statusLabels: Record<string, string> = {
+            "TODO": "New",
+            "IN_PROGRESS": "In Progress",
+            "DONE": "Completed",
+            "PAUSED": "Paused",
+            "CLOSED": "Closed"
+          };
+          const oldLabel = statusLabels[oldRequest.status] || oldRequest.status;
+          const newLabel = statusLabels[updateData.status] || updateData.status;
+          changes.push(`Changed status from "${oldLabel}" to "${newLabel}"`);
+        }
+        if (updateData.hasOwnProperty("type") && updateData.type !== oldRequest.type) {
+          changes.push(`Changed request type from "${oldRequest.type}" to "${updateData.type}"`);
+        }
+        if (updateData.hasOwnProperty("priority") && updateData.priority !== oldRequest.priority) {
+          changes.push(`Changed priority from "${oldRequest.priority}" to "${updateData.priority}"`);
+        }
+        if (updateData.hasOwnProperty("taskPriority") && updateData.taskPriority !== oldRequest.taskPriority) {
+          const taskPriorityLabels: Record<string, string> = {
+            "HIGHEST": "Highest",
+            "HIGH": "High",
+            "MEDIUM": "Medium",
+            "LOW": "Low",
+            "LOWEST": "Lowest",
+            "": "None"
+          };
+          const oldLabel = taskPriorityLabels[oldRequest.taskPriority || ""] || oldRequest.taskPriority || "None";
+          const newLabel = taskPriorityLabels[updateData.taskPriority || ""] || updateData.taskPriority || "None";
+          changes.push(`Changed task priority from "${oldLabel}" to "${newLabel}"`);
+        }
+        if (updateData.hasOwnProperty("urgency")) {
+          const oldUrgency = oldRequest.urgency || "";
+          const newUrgency = updateData.urgency || "";
+          if (newUrgency !== oldUrgency) {
+            const urgencyLabels: Record<string, string> = {
+              "IMMEDIATE": "Immediate",
+              "URGENT": "Urgent",
+              "MODERATE": "Moderate",
+              "STANDARD": "Standard",
+              "": "None"
+            };
+            const oldLabel = urgencyLabels[oldUrgency] || oldUrgency || "None";
+            const newLabel = urgencyLabels[newUrgency] || newUrgency || "None";
+            changes.push(`Changed urgency from "${oldLabel}" to "${newLabel}"`);
+          }
+        }
+        if (updateData.hasOwnProperty("impact")) {
+          const oldImpact = oldRequest.impact || "";
+          const newImpact = updateData.impact || "";
+          if (newImpact !== oldImpact) {
+            const impactLabels: Record<string, string> = {
+              "WIDESPREAD": "Widespread",
+              "LARGE": "Large",
+              "LIMITED": "Limited",
+              "LOCALISED": "Localised",
+              "": "None"
+            };
+            const oldLabel = impactLabels[oldImpact] || oldImpact || "None";
+            const newLabel = impactLabels[newImpact] || newImpact || "None";
+            changes.push(`Changed impact from "${oldLabel}" to "${newLabel}"`);
+          }
+        }
+        if (updateData.hasOwnProperty("deadline")) {
+          const oldTime = oldRequest.deadline ? new Date(oldRequest.deadline).getTime() : 0;
+          const newTime = updateData.deadline ? new Date(updateData.deadline).getTime() : 0;
+          if (newTime !== oldTime) {
+            const oldStr = oldRequest.deadline ? new Date(oldRequest.deadline).toLocaleDateString("en-GB") : "None";
+            const newStr = updateData.deadline ? new Date(updateData.deadline).toLocaleDateString("en-GB") : "None";
+            changes.push(`Changed due date from "${oldStr}" to "${newStr}"`);
+          }
+        }
+        if (updateData.hasOwnProperty("assigneeIds") && updateData.assigneeIds !== oldRequest.assigneeIds) {
+          const oldIds = (oldRequest.assigneeIds || "").split(",").filter(Boolean);
+          const newIds = (updateData.assigneeIds || "").split(",").filter(Boolean);
+          const oldUsers = oldIds.length > 0 ? await tx.user.findMany({
+            where: { id: { in: oldIds } },
+            select: { name: true }
+          }) : [];
+          const newUsers = newIds.length > 0 ? await tx.user.findMany({
+            where: { id: { in: newIds } },
+            select: { name: true }
+          }) : [];
+          const oldNames = oldUsers.map(u => u.name).join(", ") || "Unassigned";
+          const newNames = newUsers.map(u => u.name).join(", ") || "Unassigned";
+          changes.push(`Changed assignee(s) from "${oldNames}" to "${newNames}"`);
+        } else if (updateData.hasOwnProperty("assigneeId") && updateData.assigneeId !== oldRequest.assigneeId) {
+          let newAssigneeName = "Unassigned";
+          if (updateData.assigneeId) {
+            const newAssigneeUser = await tx.user.findUnique({
+              where: { id: updateData.assigneeId },
+              select: { name: true }
+            });
+            if (newAssigneeUser?.name) {
+              newAssigneeName = newAssigneeUser.name;
+            }
+          }
+          const oldAssigneeName = oldRequest.assignee?.name || "Unassigned";
+          changes.push(`Changed assignee from "${oldAssigneeName}" to "${newAssigneeName}"`);
+        }
+        if (updateData.hasOwnProperty("packageId") && updateData.packageId !== oldRequest.packageId) {
+          let newPackageName = "Not selected";
+          if (updateData.packageId) {
+            const newPkg = await tx.premiumPackage.findUnique({
+              where: { id: updateData.packageId },
+              select: { name: true }
+            });
+            if (newPkg?.name) {
+              newPackageName = newPkg.name;
+            }
+          }
+          const oldPackageName = oldRequest.package?.name || "Not selected";
+          changes.push(`Changed service package from "${oldPackageName}" to "${newPackageName}"`);
+        }
+
+        if (changes.length > 0) {
+          await tx.auditLog.create({
+            data: {
+              requestId: id,
+              userId: session.user?.id,
+              action: "UPDATE_INFO",
+              details: changes.join(", ")
+            }
+          });
+        }
+      }
+
+      // Batch notifications for later processing
+      if (updateData.assigneeIds && updateData.assigneeIds !== oldRequest?.assigneeIds) {
+        const oldIds = (oldRequest?.assigneeIds || "").split(",").filter(Boolean);
+        const newIds = (updateData.assigneeIds || "").split(",").filter(Boolean);
+        const addedIds = newIds.filter((id: string) => !oldIds.includes(id));
+        for (const addedId of addedIds) {
+          pendingNotifications.push({
+            userId: addedId,
+            title: "📌 You have a new assignment",
+            message: `Request: ${oldRequest?.code} - ${updateData.title || oldRequest?.title}`,
+            type: "ASSIGNMENT",
+            link: `/requests/${id}`
+          });
+        }
+      } else if (updateData.assigneeId && updateData.assigneeId !== oldRequest?.assigneeId) {
         pendingNotifications.push({
           userId: updateData.assigneeId,
-          title: "📌 Bạn có một phân công mới",
-          message: `Yêu cầu: ${oldRequest?.code} - ${updateData.title || oldRequest?.title}`,
+          title: "📌 You have a new assignment",
+          message: `Request: ${oldRequest?.code} - ${updateData.title || oldRequest?.title}`,
           type: "ASSIGNMENT",
           link: `/requests/${id}`
         });
@@ -235,8 +472,8 @@ export async function updateServiceRequest(id: string, formData: FormData) {
           if (admin.id !== session.user?.id) {
             pendingNotifications.push({
               userId: admin.id,
-              title: "✅ Yêu cầu đã hoàn thành",
-              message: `Mã: ${oldRequest.code} đã được chuyển sang trạng thái Hoàn thành`,
+              title: "✅ Request completed",
+              message: `Code: ${oldRequest.code} has been marked as Completed`,
               type: "STATUS_CHANGE",
               link: `/requests/${id}`
             });
@@ -247,12 +484,12 @@ export async function updateServiceRequest(id: string, formData: FormData) {
       if (sroItemsJson !== null) {
         const sroItems: SROItem[] = JSON.parse(sroItemsJson as string || "[]");
         
-        // 1. Lấy danh sách items hiện tại trong DB
+        // 1. Get current items in DB
         const existingItems = await tx.serviceRequestItem.findMany({
           where: { requestId: id }
         });
 
-        // 2. Xác định các items cần giữ lại/cập nhật và các items mới
+        // 2. Identify items to keep/update and new items
         const itemsToKeep = sroItems.filter(newItem => 
           existingItems.some(ex => ex.sroRuleId === newItem.sroRuleId)
         );
@@ -262,7 +499,7 @@ export async function updateServiceRequest(id: string, formData: FormData) {
         const itemIdsToKeep = itemsToKeep.map(i => i.sroRuleId);
         const itemsToDelete = existingItems.filter(ex => !itemIdsToKeep.includes(ex.sroRuleId));
 
-        // 3. Cập nhật số lượng cho các items cũ
+        // 3. Update quantity for old items
         for (const item of itemsToKeep) {
           await tx.serviceRequestItem.updateMany({
             where: { requestId: id, sroRuleId: item.sroRuleId },
@@ -270,7 +507,7 @@ export async function updateServiceRequest(id: string, formData: FormData) {
           });
         }
 
-        // 4. Tạo mới các items chưa có
+        // 4. Create new items
         for (const item of itemsToAdd) {
           await tx.serviceRequestItem.create({
             data: {
@@ -281,7 +518,7 @@ export async function updateServiceRequest(id: string, formData: FormData) {
           });
         }
 
-        // 5. Xóa các items không còn trong danh sách mới (chỉ xóa nếu không có WorkLogs bám vào)
+        // 5. Delete items not in new list (only if no WorkLogs attached)
         for (const item of itemsToDelete) {
           const hasLogs = await tx.workLog.findFirst({
             where: { serviceRequestItemId: item.id }
@@ -290,23 +527,32 @@ export async function updateServiceRequest(id: string, formData: FormData) {
           if (!hasLogs) {
             await tx.serviceRequestItem.delete({ where: { id: item.id } });
           }
-          // Nếu có logs thì giữ lại item đó để tránh lỗi Foreign Key
+          // If has logs, keep item to prevent Foreign Key error
         }
       }
     }, {
-      timeout: 20000 // Tăng timeout lên 20 giây cho an toàn
+      timeout: 20000 // Increase timeout to 20 seconds for safety
     });
 
-    // 2. Gửi thông báo hệ thống sau khi transaction thành công
+    // 2. Send system notifications after successful transaction
     if (pendingNotifications.length > 0) {
-      // Chạy bất đồng bộ để không chặn phản hồi của người dùng
+      // Run asynchronously to not block user response
       Promise.all(pendingNotifications.map(n => createNotification(n)))
         .catch(err => console.error("Delayed notifications failed:", err));
     }
 
-    // Gửi thông báo Email ngoài Transaction
+    // Send Email notifications outside Transaction
     try {
-      if (assigneeId && formData.has("assigneeId")) {
+      if (formData.has("assigneeIds") && assigneeIds) {
+        const req = await prisma.serviceRequest.findUnique({ where: { id }, include: { client: true } });
+        if (req && req.assigneeIds) {
+          const ids = req.assigneeIds.split(",").filter(Boolean);
+          for (const uid of ids) {
+            const user = await prisma.user.findUnique({ where: { id: uid } });
+            if (user) await NotificationService.notifyAssignment(req, user);
+          }
+        }
+      } else if (assigneeId && formData.has("assigneeId")) {
         const req = await prisma.serviceRequest.findUnique({ where: { id }, include: { client: true } });
         const user = await prisma.user.findUnique({ where: { id: assigneeId } });
         if (req && user) await NotificationService.notifyAssignment(req, user);
@@ -323,14 +569,14 @@ export async function updateServiceRequest(id: string, formData: FormData) {
     return { success: true };
   } catch (error: any) {
     console.error("DEBUG - Error updating Request:", error);
-    return { error: `Lỗi cập nhật: ${error.message}` };
+    return { error: `Update error: ${error.message}` };
   }
 }
 
 export async function updateRequestStatus(id: string, status: string) {
   try {
     const session = await auth();
-    if (!session) return { error: "Bạn cần đăng nhập" };
+    if (!session) return { error: "You need to log in" };
 
     const currentRequest = await prisma.serviceRequest.findUnique({
       where: { id },
@@ -340,15 +586,16 @@ export async function updateRequestStatus(id: string, status: string) {
       }
     });
 
-    if (!currentRequest) return { error: "Yêu cầu không tồn tại" };
+    if (!currentRequest) return { error: "Request does not exist" };
 
     if (status === "DONE") {
-      const isAssignee = currentRequest.assigneeId === session.user?.id;
+      const isAssignee = currentRequest.assigneeId === session.user?.id ||
+        (currentRequest.assigneeIds && currentRequest.assigneeIds.split(",").map(id => id.trim()).includes(session.user?.id || ""));
       const isAdmin = session.user?.role === "ADMIN";
       const isTAS = session.user?.role === "TAS";
 
       if (!isAssignee && !isAdmin && !isTAS) {
-        return { error: "Bạn không có quyền hoàn thành yêu cầu này" };
+        return { error: "You do not have permission to complete this request" };
       }
 
       // Check if ALL SRO items have been logged
@@ -363,15 +610,35 @@ export async function updateRequestStatus(id: string, status: string) {
       if (unloggedItems.length > 0) {
         const itemNames = unloggedItems.map(item => item.sroRule.taskName).join(", ");
         return { 
-          error: `Bạn chưa log thời gian cho các hạng mục SRO sau: ${itemNames}. Vui lòng log đủ các hạng mục trước khi hoàn thành.` 
+          error: `Time not logged for the following SRO items: ${itemNames}. Please log all items before completing.` 
         };
       }
     }
 
-    await prisma.serviceRequest.update({
-      where: { id },
-      data: { status }
-    });
+    const statusLabels: Record<string, string> = {
+      "TODO": "New",
+      "IN_PROGRESS": "In Progress",
+      "DONE": "Completed",
+      "PAUSED": "Paused",
+      "CLOSED": "Closed"
+    };
+    const oldLabel = statusLabels[currentRequest.status] || currentRequest.status;
+    const newLabel = statusLabels[status] || status;
+
+    await prisma.$transaction([
+      prisma.serviceRequest.update({
+        where: { id },
+        data: { status }
+      }),
+      prisma.auditLog.create({
+        data: {
+          requestId: id,
+          userId: session.user?.id,
+          action: "UPDATE_STATUS",
+          details: `Quick status change from "${oldLabel}" to "${newLabel}"`
+        }
+      })
+    ]);
 
     // Notify relevant users for ANY status change
     const req = await prisma.serviceRequest.findUnique({ 
@@ -389,17 +656,19 @@ export async function updateRequestStatus(id: string, status: string) {
       if (req.client.ownerId) targets.add(req.client.ownerId);
 
       const statusLabels: Record<string, string> = {
-        "TODO": "Cần làm",
-        "IN_PROGRESS": "Đang xử lý",
-        "DONE": "Hoàn thành"
+        "TODO": "New",
+        "IN_PROGRESS": "In Progress",
+        "DONE": "Completed",
+        "PAUSED": "Paused",
+        "CLOSED": "Closed"
       };
 
       for (const targetId of targets) {
         if (targetId !== session.user?.id) {
           await createNotification({
             userId: targetId,
-            title: `🔄 Trạng thái thay đổi: ${statusLabels[status] || status}`,
-            message: `Yêu cầu ${req.code} đã được chuyển sang "${statusLabels[status] || status}" bởi ${session.user?.name}`,
+            title: `🔄 Status changed: ${statusLabels[status] || status}`,
+            message: `Request ${req.code} moved to "${statusLabels[status] || status}" by ${session.user?.name}`,
             type: "STATUS_CHANGE",
             link: `/requests/${id}`
           });
@@ -419,13 +688,13 @@ export async function updateRequestStatus(id: string, status: string) {
           if (!targets.has(admin.id)) { // Avoid double notification
             await createNotification({
               userId: admin.id,
-              title: "✅ Yêu cầu đã hoàn thành",
-              message: `Mã: ${req.code} đã hoàn thành bởi ${session.user?.name}`,
+              title: "✅ Request completed",
+              message: `Code: ${req.code} completed by ${session.user?.name}`,
               type: "STATUS_CHANGE",
               link: `/requests/${id}`
             });
 
-            // Email cho Admin
+            // Email for Admin
             if (admin.email) {
               await NotificationService.notifyStatusChange(req, currentRequest.status, status, admin);
             }
@@ -433,7 +702,7 @@ export async function updateRequestStatus(id: string, status: string) {
         }
       }
 
-      // Thông báo cho Assignee/Creator qua email
+      // Notify Assignee/Creator via email
       if (req.assigneeId && req.assigneeId !== session.user?.id) {
         await NotificationService.notifyStatusChange(req, currentRequest.status, status, req.assignee);
       }
@@ -499,14 +768,14 @@ export async function getMyTasks() {
 export async function deleteServiceRequest(id: string) {
   try {
     const session = await auth();
-    if (!session) return { error: "Bạn cần đăng nhập" };
+    if (!session) return { error: "You need to log in" };
 
     const currentRequest = await prisma.serviceRequest.findUnique({
       where: { id },
       select: { createdById: true, status: true }
     });
 
-    if (!currentRequest) return { error: "Yêu cầu không tồn tại" };
+    if (!currentRequest) return { error: "Request does not exist" };
 
     const isAdmin = session.user?.role === "ADMIN";
     const isCreator = currentRequest.createdById === session.user?.id;
@@ -514,7 +783,7 @@ export async function deleteServiceRequest(id: string) {
 
     // Security: Admin or (Creator + status TODO)
     if (!isAdmin && !(isCreator && isTodo)) {
-      return { error: "Bạn không có quyền xóa yêu cầu này (Chỉ được xóa khi ở trạng thái TODO hoặc bạn là Admin)" };
+      return { error: "You do not have permission to delete this request (Only deletable when in TODO status or if you are Admin)" };
     }
 
     await prisma.serviceRequest.delete({ where: { id } });

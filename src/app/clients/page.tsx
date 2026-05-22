@@ -19,8 +19,8 @@ export default async function ClientsPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Quản lý Khách hàng</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Danh sách các đối tác sử dụng dịch vụ Premium</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Client Management</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">List of partners using Premium services</p>
         </div>
         <ClientForm tasUsers={tasUsers} />
       </div>
@@ -31,7 +31,7 @@ export default async function ClientsPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm kiếm khách hàng..."
+              placeholder="Search clients..."
               className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-900 dark:text-slate-100 transition-all shadow-sm"
             />
           </div>
@@ -41,19 +41,18 @@ export default async function ClientsPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-black text-[10px] uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="px-8 py-5">Mã KH</th>
-                <th className="px-8 py-5">Tên khách hàng</th>
-                <th className="px-8 py-5">Người phụ trách (TAS)</th>
-                <th className="px-8 py-5">Trạng thái</th>
-                <th className="px-8 py-5">Ngày tạo</th>
-                <th className="px-8 py-5 text-right">Thao tác</th>
+                <th className="px-8 py-5">Code</th>
+                <th className="px-8 py-5">Client Name</th>
+                <th className="px-8 py-5">Account Owner (TAS)</th>
+                <th className="px-8 py-5">Status</th>
+                <th className="px-8 py-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 font-medium">
               {clients.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-12 text-center text-slate-500 dark:text-slate-400 italic">
-                    Chưa có khách hàng nào.
+                  <td colSpan={5} className="px-8 py-12 text-center text-slate-500 dark:text-slate-400 italic">
+                    No clients yet.
                   </td>
                 </tr>
               ) : (
@@ -83,22 +82,19 @@ export default async function ClientsPage() {
                           <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{client.owner.name}</span>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400 italic">Chưa gán</span>
+                        <span className="text-xs text-slate-400 italic">Unassigned</span>
                       )}
                     </td>
                     <td className="px-8 py-6">
                       {client.isActive ? (
                         <span className="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-900/30">
-                          Đang hoạt động
+                          Active
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                          Ngừng hoạt động
+                          Inactive
                         </span>
                       )}
-                    </td>
-                    <td className="px-8 py-6 text-slate-500 dark:text-slate-400">
-                      {new Date(client.createdAt).toLocaleDateString("vi-VN")}
                     </td>
                     <td className="px-8 py-6 text-right">
                       <ClientForm tasUsers={tasUsers} initialData={client} />

@@ -34,6 +34,7 @@ export default async function RequestsPage({
       mine && userId ? {
         OR: [
           { assigneeId: userId },
+          { assigneeIds: { contains: userId } },
           { client: { ownerId: userId } }
         ]
       } : {}

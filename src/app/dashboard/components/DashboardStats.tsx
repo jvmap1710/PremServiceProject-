@@ -5,7 +5,7 @@ import { FileText, Clock, Activity, CheckCircle2 } from "lucide-react";
 export function DashboardStats({ stats }: { stats: any }) {
   const cards = [
     {
-      title: "Tổng Ticket",
+      title: "Total Tickets",
       value: stats.totalRequests,
       icon: FileText,
       color: "text-blue-600 dark:text-blue-400",
@@ -13,7 +13,7 @@ export function DashboardStats({ stats }: { stats: any }) {
       borderColor: "border-blue-100/50 dark:border-blue-900/30"
     },
     {
-      title: "Tổng giờ SRO",
+      title: "Total SRO Hours",
       value: `${stats.totalHours}h`,
       icon: Clock,
       color: "text-purple-600 dark:text-purple-400",
@@ -21,7 +21,7 @@ export function DashboardStats({ stats }: { stats: any }) {
       borderColor: "border-purple-100/50 dark:border-purple-900/30"
     },
     {
-      title: "Đang xử lý",
+      title: "In Progress",
       value: stats.inProgressRequests,
       icon: Activity,
       color: "text-orange-600 dark:text-orange-400",
@@ -29,7 +29,7 @@ export function DashboardStats({ stats }: { stats: any }) {
       borderColor: "border-orange-100/50 dark:border-orange-900/30"
     },
     {
-      title: "Tỉ lệ hoàn thành",
+      title: "Completion Rate",
       value: `${stats.completionRate}%`,
       icon: CheckCircle2,
       color: "text-green-600 dark:text-green-400",

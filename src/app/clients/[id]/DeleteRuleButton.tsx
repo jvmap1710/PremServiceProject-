@@ -8,7 +8,7 @@ export function DeleteRuleButton({ id, packageId }: { id: string; packageId: str
   const [pending, setPending] = useState(false);
 
   async function handleDelete() {
-    if (!confirm("Bạn có chắc chắn muốn xóa quy tắc này? Số giờ tương ứng sẽ được trừ khỏi tổng Quota.")) return;
+    if (!confirm("Are you sure you want to delete this rule? The corresponding hours will be deducted from the total Quota.")) return;
     
     setPending(true);
     const result = await deleteSRORule(id, packageId);
@@ -23,7 +23,7 @@ export function DeleteRuleButton({ id, packageId }: { id: string; packageId: str
       onClick={handleDelete}
       disabled={pending}
       className="text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
-      title="Xóa quy tắc"
+      title="Delete rule"
     >
       <Trash2 className="w-4 h-4" />
     </button>

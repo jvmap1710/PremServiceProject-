@@ -10,7 +10,7 @@ export function PackageForm({
   initialData 
 }: { 
   clientId: string;
-  initialData?: { id: string; name: string; validFrom: Date; validTo: Date; isActive: boolean; monthlyPrice: number };
+  initialData?: { id: string; name: string; validFrom: Date | string; validTo: Date | string; isActive: boolean; monthlyPrice: number };
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,9 +25,9 @@ export function PackageForm({
     setError(null);
     setPending(true);
     
-    formData.append("clientId", clientId);
-    if (isEdit) formData.append("id", initialData.id);
-    if (isEdit) formData.append("isActive", formData.get("isActive") === "on" ? "true" : "false");
+    formData.set("clientId", clientId);
+    if (isEdit) formData.set("id", initialData.id);
+    if (isEdit) formData.set("isActive", formData.get("isActive") === "on" ? "true" : "false");
 
     const result = isEdit ? await updatePremiumPackage(formData) : await createPremiumPackage(formData);
     
@@ -40,7 +40,7 @@ export function PackageForm({
   }
 
   async function handleDelete() {
-    if (!confirm("Bạn có chắc chắn muốn xóa gói Premium này? (Tất cả quy tắc bên trong cũng sẽ bị xóa)")) return;
+    if (!confirm("Are you sure you want to delete this Premium package? (All rules inside will also be deleted)")) return;
     setPending(true);
     const result = await deletePremiumPackage(initialData!.id, clientId);
     if (result?.error) setError(result.error);
@@ -54,7 +54,7 @@ export function PackageForm({
         <button
           onClick={() => setIsOpen(true)}
           className="p-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
-          title="Chỉnh sửa gói"
+          title="Edit Package"
         >
           <Edit className="w-4.5 h-4.5" />
         </button>
@@ -64,7 +64,7 @@ export function PackageForm({
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20 flex items-center gap-2 active:scale-95"
         >
           <Plus className="w-4 h-4" />
-          Thêm gói Premium
+          Add Premium Package
         </button>
       )}
 
@@ -74,7 +74,7 @@ export function PackageForm({
             <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
               <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-3">
                 <PackageIcon className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
-                {isEdit ? "Chỉnh sửa gói Premium" : "Thêm gói Premium mới"}
+                {isEdit ? "Edit Premium Package" : "Add New Premium Package"}
               </h2>
               <button 
                 onClick={() => setIsOpen(false)}
@@ -87,7 +87,7 @@ export function PackageForm({
             <form action={handleSubmit} className="p-8 space-y-6">
               <div className="space-y-1.5">
                 <label htmlFor="name" className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                  Tên gói
+                  Package Name
                 </label>
                 <input
                   type="text"
@@ -95,7 +95,7 @@ export function PackageForm({
                   name="name"
                   required
                   defaultValue={initialData?.name}
-                  placeholder="VD: Gói Prem 2026"
+                  placeholder="e.g. Prem Package 2026"
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-bold text-slate-900 dark:text-slate-100 shadow-inner"
                 />
               </div>
@@ -103,7 +103,7 @@ export function PackageForm({
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <label htmlFor="validFrom" className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                    Hiệu lực từ
+                    Valid From
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -119,7 +119,7 @@ export function PackageForm({
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="validTo" className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                    Đến ngày
+                    Valid Until
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -137,7 +137,7 @@ export function PackageForm({
 
               <div className="space-y-1.5">
                 <label htmlFor="monthlyPrice" className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                  Giá gói mỗi tháng (VNĐ)
+                  Package Price (VND)
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 pointer-events-none">₫</span>
@@ -147,7 +147,7 @@ export function PackageForm({
                     name="monthlyPrice"
                     required
                     defaultValue={initialData?.monthlyPrice}
-                    placeholder="VD: 50000000"
+                    placeholder="EX: 50000000"
                     className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-bold text-slate-900 dark:text-slate-100 shadow-inner"
                   />
                 </div>
@@ -163,7 +163,7 @@ export function PackageForm({
                     className="w-5 h-5 text-indigo-600 rounded-lg border-slate-300 dark:border-slate-800 focus:ring-indigo-500 dark:bg-slate-900"
                   />
                   <label htmlFor="isActive" className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                    Đang áp dụng (Active)
+                    Currently Active
                   </label>
                 </div>
               )}
@@ -182,7 +182,7 @@ export function PackageForm({
                     onClick={handleDelete}
                     disabled={pending}
                     className="p-3 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all active:scale-90"
-                    title="Xóa gói"
+                    title="Delete Package"
                   >
                     <Trash2 className="w-5.5 h-5.5" />
                   </button>
@@ -193,14 +193,14 @@ export function PackageForm({
                     onClick={() => setIsOpen(false)}
                     className="px-6 py-3 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
                   >
-                    Hủy
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={pending}
                     className="px-8 py-3 text-sm font-black uppercase tracking-widest text-white bg-indigo-600 rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20 transition-all disabled:opacity-50 active:scale-95"
                   >
-                    {pending ? "Đang xử lý..." : "Lưu gói Premium"}
+                    {pending ? "Processing..." : "Save Premium Package"}
                   </button>
                 </div>
               </div>

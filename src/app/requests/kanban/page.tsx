@@ -61,11 +61,11 @@ export default async function KanbanPage() {
             className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium text-xs group"
           >
             <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
-            Trở lại danh sách
+            Back to list
           </Link>
           <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-3">
             <LayoutGrid className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-            Board Quản lý Ticket
+            Ticket Management Board
           </h1>
 
         </div>

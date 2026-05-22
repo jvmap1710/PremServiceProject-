@@ -41,7 +41,7 @@ test.describe('Premium Service Dashboard', () => {
     
     await page.locator('text=Task Management').scrollIntoViewIfNeeded();
     
-    // Đợi cột Kanban xuất hiện
-    await expect(page.locator('.w-80').first()).toBeVisible({ timeout: 20000 });
+    // Đợi cột Kanban xuất hiện (lọc theo cột hiển thị trên Desktop)
+    await expect(page.locator('.md\\:flex [data-testid="kanban-column"]').first()).toBeVisible({ timeout: 20000 });
   });
 });

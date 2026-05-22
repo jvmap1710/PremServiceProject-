@@ -33,7 +33,7 @@ export const NotificationService = {
             <div class="content">
               ${content}
               <center>
-                <a href="${process.env.NEXTAUTH_URL}" class="btn">Mở Dashboard / Open Dashboard</a>
+                <a href="${process.env.NEXTAUTH_URL}" class="btn">Open Dashboard</a>
               </center>
             </div>
             <div class="footer">
@@ -47,7 +47,7 @@ export const NotificationService = {
   },
 
   /**
-   * Thông báo khi có Request mới
+   * Notification for new Request
    */
   async notifyNewRequest(request: any) {
     const admins = await prisma.user.findMany({
@@ -59,25 +59,25 @@ export const NotificationService = {
       if (admin.email) {
         const html = this.getPremiumTemplate(`
           <div class="badge badge-blue">New Service Request</div>
-          <h2 style="margin-top: 0;">Chào ${admin.name}, một yêu cầu mới vừa được tạo.</h2>
-          <p>Hệ thống ghi nhận yêu cầu dịch vụ mới từ khách hàng cần xử lý.</p>
+          <h2 style="margin-top: 0;">Hi ${admin.name}, a new request has been created.</h2>
+          <p>The system has recorded a new service request that needs processing.</p>
           
           <div class="info-box">
             <div style="margin-bottom: 16px;">
-              <span class="label">Mã yêu cầu (Request ID)</span>
+              <span class="label">Request ID</span>
               <span class="value">${request.code}</span>
             </div>
             <div style="margin-bottom: 16px;">
-              <span class="label">Tiêu đề (Title)</span>
+              <span class="label">Title</span>
               <span class="value">${request.title}</span>
             </div>
             <div>
-              <span class="label">Khách hàng (Client)</span>
+              <span class="label">Client</span>
               <span class="value">${request.client?.name || 'N/A'}</span>
             </div>
           </div>
           
-          <p style="font-size: 13px; color: #64748b;">Vui lòng truy cập hệ thống để giao việc cho kỹ sư thực hiện.</p>
+          <p style="font-size: 13px; color: #64748b;">Please access the system to assign this to an engineer.</p>
         `, `New Request: ${request.code}`);
 
         await sendMail({ to: admin.email, subject: `[NEW] ${request.code}: ${request.title}`, html });
@@ -86,43 +86,43 @@ export const NotificationService = {
   },
 
   /**
-   * Thông báo khi giao việc (Assignment)
+   * Notification for assignment
    */
   async notifyAssignment(request: any, assignee: any) {
     if (!assignee.email) return;
 
     const html = this.getPremiumTemplate(`
       <div class="badge badge-blue">Task Assigned</div>
-      <h2 style="margin-top: 0;">Chào ${assignee.name}, bạn có nhiệm vụ mới.</h2>
-      <p>Bạn đã được chỉ định là người thực hiện chính cho yêu cầu dịch vụ sau:</p>
+      <h2 style="margin-top: 0;">Hi ${assignee.name}, you have a new task.</h2>
+      <p>You have been assigned as the main engineer for the following service request:</p>
       
       <div class="info-box">
         <div style="margin-bottom: 16px;">
-          <span class="label">Mã yêu cầu (Request ID)</span>
+          <span class="label">Request ID</span>
           <span class="value">${request.code}</span>
         </div>
         <div>
-          <span class="label">Yêu cầu (Title)</span>
+          <span class="label">Title</span>
           <span class="value">${request.title}</span>
         </div>
       </div>
       
-      <p style="font-size: 13px; color: #64748b;">Vui lòng kiểm tra các hạng mục công việc (SRO) và bắt đầu thực hiện.</p>
+      <p style="font-size: 13px; color: #64748b;">Please check the SRO items and start executing.</p>
     `, `Assigned: ${request.code}`);
 
     await sendMail({ to: assignee.email, subject: `[ASSIGNED] ${request.code}: ${request.title}`, html });
   },
 
   /**
-   * Thông báo khi đổi trạng thái
+   * Notification for status change
    */
   async notifyStatusChange(request: any, oldStatus: string, newStatus: string, targetUser: any) {
     if (!targetUser?.email) return;
 
     const html = this.getPremiumTemplate(`
       <div class="badge badge-blue">Status Updated</div>
-      <h2 style="margin-top: 0;">Cập nhật trạng thái yêu cầu</h2>
-      <p>Yêu cầu <strong>${request.code}</strong> đã được chuyển trạng thái:</p>
+      <h2 style="margin-top: 0;">Request Status Updated</h2>
+      <p>Request <strong>${request.code}</strong> has been moved to status:</p>
       
       <div class="info-box" style="text-align: center;">
         <span style="color: #94a3b8; text-decoration: line-through; font-size: 14px;">${oldStatus}</span>
@@ -135,33 +135,57 @@ export const NotificationService = {
   },
 
   /**
-   * Thông báo khi có comment mới
+   * Notification for new comment
    */
-  async notifyNewComment(request: any, comment: any, authorName: string) {
-    // Thông báo cho Assignee và Creator (trừ người vừa comment)
+  async notifyNewComment(request: any, comment: any, authorName: string, excludedEmails?: string[]) {
+    // Notify Assignee and Creator (except the one who commented)
     const recipients = [];
     if (request.assignee?.email) recipients.push({ email: request.assignee.email, name: request.assignee.name });
     if (request.creator?.email) recipients.push({ email: request.creator.email, name: request.creator.name });
 
-    // Lọc bỏ người trùng và người vừa comment
+    // Filter out duplicates, the commenter, and excluded emails
     const finalRecipients = recipients.filter((r, idx, self) => 
       r.email && 
       r.email !== comment.userEmail && 
+      (!excludedEmails || !excludedEmails.includes(r.email)) &&
       self.findIndex(t => t.email === r.email) === idx
     );
 
     for (const person of finalRecipients) {
       const html = this.getPremiumTemplate(`
         <div class="badge badge-blue">New Comment</div>
-        <h2 style="margin-top: 0;">Thảo luận mới từ ${authorName}</h2>
-        <p>Có phản hồi mới trong yêu cầu <strong>${request.code}</strong>:</p>
+        <h2 style="margin-top: 0;">New discussion from ${authorName}</h2>
+        <p>There is a new response in request <strong>${request.code}</strong>:</p>
         
         <div class="info-box" style="border-left: 4px solid #2563eb;">
           <p style="margin: 0; font-style: italic; color: #475569;">"${comment.content}"</p>
         </div>
       `, `New Comment: ${request.code}`);
 
-      await sendMail({ to: person.email, subject: `[COMMENT] ${request.code}: ${authorName} phản hồi`, html });
+      await sendMail({ to: person.email, subject: `[COMMENT] ${request.code}: ${authorName} replied`, html });
     }
+  },
+
+  /**
+   * Notification when mentioned in a comment
+   */
+  async notifyMentionInComment(request: any, comment: any, authorName: string, targetUser: any) {
+    if (!targetUser?.email) return;
+
+    const html = this.getPremiumTemplate(`
+      <div class="badge badge-blue" style="background: #f3e8ff; color: #7c3aed;">You Were Mentioned</div>
+      <h2 style="margin-top: 0;">Hi ${targetUser.name}, you were mentioned in a discussion.</h2>
+      <p><strong>${authorName}</strong> mentioned you in request <strong>${request.code}</strong>:</p>
+      
+      <div class="info-box" style="border-left: 4px solid #7c3aed; background: #faf5ff;">
+        <p style="margin: 0; font-style: italic; color: #475569;">"${comment.content}"</p>
+      </div>
+    `, `Mentioned in Comment: ${request.code}`);
+
+    await sendMail({ 
+      to: targetUser.email, 
+      subject: `[MENTION] ${request.code}: ${authorName} mentioned you`,
+      html 
+    });
   }
 };

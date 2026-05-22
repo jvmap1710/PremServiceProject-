@@ -25,7 +25,7 @@ export function DashboardCharts({ stats }: { stats: any }) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Status Distribution */}
       <div className="bg-white dark:bg-slate-900 p-5 md:p-8 rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col">
-        <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-6">Trạng thái Ticket</h3>
+        <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-6">Ticket Status</h3>
         <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -54,7 +54,7 @@ export function DashboardCharts({ stats }: { stats: any }) {
 
       {/* Type Distribution */}
       <div className="bg-white dark:bg-slate-900 p-5 md:p-8 rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col">
-        <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-6">Phân loại Yêu cầu</h3>
+        <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-6">Request Type</h3>
         <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={stats.typeCounts || []}>

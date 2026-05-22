@@ -47,7 +47,7 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20 flex items-center gap-2 active:scale-95"
         >
           <Plus className="w-4 h-4" />
-          Thêm khách hàng
+          Add Client
         </button>
       )}
 
@@ -56,7 +56,7 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
           <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
               <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                {isEdit ? "Cập nhật khách hàng" : "Thêm khách hàng mới"}
+                {isEdit ? "Update Client" : "Add New Client"}
               </h2>
               <button 
                 onClick={() => setIsOpen(false)}
@@ -70,7 +70,7 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="code" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                    Mã khách hàng (Viết tắt)
+                    Client Code (Abbreviation)
                   </label>
                   <input
                     type="text"
@@ -78,14 +78,14 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
                     name="code"
                     defaultValue={initialData?.code}
                     required
-                    placeholder="VD: PREM-GT"
+                    placeholder="e.g. PREM-GT"
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-slate-100 transition-all shadow-inner"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label htmlFor="isActive" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                    Trạng thái
+                    Status
                   </label>
                   <select
                     id="isActive"
@@ -93,15 +93,15 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
                     defaultValue={initialData?.isActive?.toString() ?? "true"}
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-slate-100 transition-all shadow-inner"
                   >
-                    <option value="true">Đang hoạt động</option>
-                    <option value="false">Ngừng hoạt động</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
                   </select>
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor="name" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                  Tên đầy đủ khách hàng
+                  Full Client Name
                 </label>
                 <input
                   type="text"
@@ -109,7 +109,7 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
                   name="name"
                   defaultValue={initialData?.name}
                   required
-                  placeholder="VD: Công ty TNHH Green Tech Việt Nam"
+                  placeholder="e.g. Green Tech Vietnam Co., Ltd."
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-slate-100 transition-all shadow-inner"
                 />
               </div>
@@ -117,27 +117,27 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="picName" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                    Người liên hệ (PIC)
+                    Contact Person (PIC)
                   </label>
                   <input
                     type="text"
                     id="picName"
                     name="picName"
                     defaultValue={initialData?.picName}
-                    placeholder="Tên PIC"
+                    placeholder="PIC Name"
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-slate-100 transition-all shadow-inner"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="picContact" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                    Số điện thoại liên hệ
+                    Contact Phone Number
                   </label>
                   <input
                     type="text"
                     id="picContact"
                     name="picContact"
                     defaultValue={initialData?.picContact}
-                    placeholder="SĐT liên hệ"
+                    placeholder="Contact phone number"
                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-slate-100 transition-all shadow-inner"
                   />
                 </div>
@@ -145,21 +145,21 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
 
               <div className="space-y-1.5">
                 <label htmlFor="address" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                  Địa chỉ
+                  Address
                 </label>
                 <input
                   type="text"
                   id="address"
                   name="address"
                   defaultValue={initialData?.address}
-                  placeholder="Địa chỉ trụ sở khách hàng"
+                  placeholder="Client headquarters address"
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-slate-100 transition-all shadow-inner"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor="ownerId" className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
-                  Người phụ trách (Owner - TAS)
+                  Account Owner (TAS)
                 </label>
                 <div className="relative">
                   <select
@@ -168,7 +168,7 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
                     defaultValue={initialData?.ownerId || ""}
                     className="w-full px-4 py-3 pl-11 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-slate-100 transition-all shadow-inner appearance-none"
                   >
-                    <option value="">-- Chưa gán --</option>
+                    <option value="">-- Unassigned --</option>
                     {tasUsers.map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.name} ({user.role})
@@ -192,14 +192,14 @@ export function ClientForm({ tasUsers = [], initialData }: ClientFormProps) {
                   onClick={() => setIsOpen(false)}
                   className="px-6 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
                   className="px-8 py-3 text-sm font-bold text-white bg-indigo-600 rounded-2xl hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20 active:scale-95"
                 >
-                  {pending ? "Đang xử lý..." : isEdit ? "Cập nhật" : "Lưu khách hàng"}
+                  {pending ? "Processing..." : isEdit ? "Update" : "Save Client"}
                 </button>
               </div>
             </form>

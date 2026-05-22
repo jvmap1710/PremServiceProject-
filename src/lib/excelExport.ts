@@ -8,10 +8,10 @@ export async function exportAnalyticsToExcel(data: any, filters: any) {
   workbook.lastModifiedBy = 'Admin';
   workbook.created = new Date();
 
-  // 1. SHEET TỔNG QUAN
-  const summarySheet = workbook.addWorksheet('TỔNG QUAN');
+  // 1. OVERVIEW SHEET
+  const summarySheet = workbook.addWorksheet('OVERVIEW');
   
-  // Style cho header
+  // Header style
   const headerStyle = {
     font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
     fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } } as ExcelJS.Fill,
@@ -19,46 +19,46 @@ export async function exportAnalyticsToExcel(data: any, filters: any) {
   };
 
   summarySheet.mergeCells('A1:D1');
-  summarySheet.getCell('A1').value = 'BÁO CÁO TỔNG QUAN HỆ THỐNG';
+  summarySheet.getCell('A1').value = 'SYSTEM OVERVIEW REPORT';
   summarySheet.getCell('A1').font = { size: 16, bold: true };
   summarySheet.getCell('A1').alignment = { horizontal: 'center' };
 
-  summarySheet.addRow(['Thời gian báo cáo:', `${format(filters.startDate, 'dd/MM/yyyy')} - ${format(filters.endDate, 'dd/MM/yyyy')}`]);
-  summarySheet.addRow(['Khách hàng:', filters.clientId === 'all' ? 'Tất cả khách hàng' : 'Khách hàng cụ thể']);
+  summarySheet.addRow(['Report Period:', `${format(filters.startDate, 'dd/MM/yyyy')} - ${format(filters.endDate, 'dd/MM/yyyy')}`]);
+  summarySheet.addRow(['Client:', filters.clientId === 'all' ? 'All Clients' : 'Specific Client']);
   summarySheet.addRow([]);
 
-  // Bảng số liệu KPI
-  summarySheet.addRow(['CHỈ SỐ KPI', 'GIÁ TRỊ']);
+  // KPI data table
+  summarySheet.addRow(['KPI INDICATOR', 'VALUE']);
   summarySheet.getRow(5).font = { bold: true };
   summarySheet.addRows([
-    ['Tổng số Ticket', data.totalTickets],
-    ['Tỷ lệ hoàn thành', `${data.completionRate.toFixed(1)}%`],
-    ['Tỷ lệ đúng hạn (SLA)', `${data.slaComplianceRate.toFixed(1)}%`],
-    ['Tổng giờ dự toán (Est)', data.totalEstimatedHours],
-    ['Tổng giờ thực tế (Act)', data.totalActualHours],
+    ['Total Tickets', data.totalTickets],
+    ['Completion Rate', `${data.completionRate.toFixed(1)}%`],
+    ['SLA Compliance', `${data.slaComplianceRate.toFixed(1)}%`],
+    ['Total Estimated Hours (Est)', data.totalEstimatedHours],
+    ['Total Actual Hours (Act)', data.totalActualHours],
   ]);
 
-  // 2. SHEET HIỆU SUẤT NHÂN SỰ
-  const perfSheet = workbook.addWorksheet('HIỆU SUẤT NHÂN SỰ');
+  // 2. PERSONNEL PERFORMANCE SHEET
+  const perfSheet = workbook.addWorksheet('PERSONNEL PERFORMANCE');
   perfSheet.columns = [
-    { header: 'NHÂN SỰ', key: 'name', width: 25 },
-    { header: 'VAI TRÒ', key: 'role', width: 15 },
-    { header: 'SỐ TICKET', key: 'tickets', width: 12 },
-    { header: 'DỰ TOÁN (H)', key: 'estimate', width: 15 },
-    { header: 'THỰC TẾ (H)', key: 'actual', width: 15 },
-    { header: 'HIỆU SUẤT (%)', key: 'efficiency', width: 15 },
-    { header: 'ĐÁNH GIÁ', key: 'status', width: 25 },
+    { header: 'PERSONNEL', key: 'name', width: 25 },
+    { header: 'ROLE', key: 'role', width: 15 },
+    { header: 'TICKETS', key: 'tickets', width: 12 },
+    { header: 'ESTIMATED (H)', key: 'estimate', width: 15 },
+    { header: 'ACTUAL (H)', key: 'actual', width: 15 },
+    { header: 'EFFICIENCY (%)', key: 'efficiency', width: 15 },
+    { header: 'EVALUATION', key: 'status', width: 25 },
   ];
 
-  // Áp dụng style cho header của sheet Hiệu suất
+  // Apply style for Performance sheet header
   perfSheet.getRow(1).eachCell((cell) => {
     cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
   });
 
   data.sroPerformance.forEach((item: any) => {
-    const status = item.efficiency >= 100 ? 'Nhanh hơn dự kiến' : 
-                   item.efficiency >= 85 ? 'Đạt yêu cầu' : 'Lố dự toán';
+    const status = item.efficiency >= 100 ? 'Faster than expected' : 
+                   item.efficiency >= 85 ? 'Meets expectation' : 'Over budget';
     
     perfSheet.addRow({
       name: item.name,
@@ -71,14 +71,14 @@ export async function exportAnalyticsToExcel(data: any, filters: any) {
     });
   });
 
-  // 3. SHEET TỐI ƯU DANH MỤC
-  const optSheet = workbook.addWorksheet('TỐI ƯU DANH MỤC');
+  // 3. PORTFOLIO OPTIMIZATION SHEET
+  const optSheet = workbook.addWorksheet('PORTFOLIO OPTIMIZATION');
   optSheet.columns = [
-    { header: 'HẠNG MỤC (SRO)', key: 'name', width: 40 },
-    { header: 'KHÁCH HÀNG', key: 'client', width: 20 },
-    { header: 'SỐ LẦN SỬ DỤNG', key: 'count', width: 15 },
-    { header: 'DỰ TOÁN/LẦN (H)', key: 'estimate', width: 15 },
-    { header: 'TỔNG GIỜ THỰC TẾ', key: 'hours', width: 15 },
+    { header: 'SRO ITEM', key: 'name', width: 40 },
+    { header: 'CLIENT', key: 'client', width: 20 },
+    { header: 'USAGE COUNT', key: 'count', width: 15 },
+    { header: 'ESTIMATE/USE (H)', key: 'estimate', width: 15 },
+    { header: 'TOTAL ACTUAL HOURS', key: 'hours', width: 15 },
   ];
 
   optSheet.getRow(1).eachCell((cell) => {
@@ -96,8 +96,8 @@ export async function exportAnalyticsToExcel(data: any, filters: any) {
     });
   });
 
-  // Xuất file
+  // Export file
   const buffer = await workbook.xlsx.writeBuffer();
-  const fileName = `Bao_cao_PremiumService_${format(new Date(), 'ddMMyyyy_HHmm')}.xlsx`;
+  const fileName = `PremiumService_Report_${format(new Date(), 'ddMMyyyy_HHmm')}.xlsx`;
   saveAs(new Blob([buffer]), fileName);
 }

@@ -11,14 +11,17 @@ test.describe('Profitability Safeguard', () => {
       await page.click('button[type="submit"]');
     }
     await expect(page.locator('h1')).toContainText('Dashboard Overview', { timeout: 30000 });
+    await page.goto('/requests');
+    await expect(page.locator('h1')).toContainText('Danh sách yêu cầu dịch vụ', { timeout: 20000 });
+    await page.waitForTimeout(2000);
   });
 
   test('should show quota warning when estimate exceeds monthly limit', async ({ page }) => {
     await page.click('text=Tạo yêu cầu mới');
     await expect(page.locator('text=Tiếp nhận yêu cầu mới')).toBeVisible();
     
-    // Chọn SMC
-    await page.locator('select').first().selectOption({ label: /SMC Manufacturing/ });
+    // Chọn SMC bằng tên chính xác để hợp lệ với TypeScript type
+    await page.locator('select').first().selectOption({ label: 'SMC Manufacturing (Vietnam) Co., Ltd' });
     
     // Đợi 1 chút để logic tính toán quota chạy ngầm (nếu có)
     await page.waitForTimeout(2000);

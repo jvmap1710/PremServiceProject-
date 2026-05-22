@@ -14,7 +14,7 @@ export function SROPerformanceTable({ data }: SROPerformanceTableProps) {
   if (!data || data.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-400 font-medium italic">Không có dữ liệu hiệu suất trong kỳ này.</p>
+        <p className="text-slate-400 font-medium italic">No performance data for this period.</p>
       </div>
     );
   }
@@ -76,21 +76,21 @@ export function SROPerformanceTable({ data }: SROPerformanceTableProps) {
         <div className="flex items-center gap-3">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
           <div className="flex flex-col">
-            <span className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest leading-none">Hiệu suất {">"} 100%</span>
-            <span className="text-[9px] font-bold text-slate-400 mt-0.5 italic">Làm nhanh hơn dự kiến (Tốt)</span>
+            <span className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest leading-none">Efficiency {">"} 100%</span>
+            <span className="text-[9px] font-bold text-slate-400 mt-0.5 italic">Faster than estimated (Good)</span>
           </div>
         </div>
         <div className="hidden md:block w-px h-6 bg-slate-200 dark:bg-slate-800" />
         <div className="flex items-center gap-3">
           <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.5)]" />
           <div className="flex flex-col">
-            <span className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest leading-none">Hiệu suất {"<"} 100%</span>
-            <span className="text-[9px] font-bold text-slate-400 mt-0.5 italic">Làm lâu hơn dự kiến (Lố dự toán)</span>
+            <span className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest leading-none">Efficiency {"<"} 100%</span>
+            <span className="text-[9px] font-bold text-slate-400 mt-0.5 italic">Slower than estimated (Over budget)</span>
           </div>
         </div>
         <div className="flex-1 text-right">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic leading-relaxed">
-            * Bấm vào tiêu đề bảng để sắp xếp nhanh
+            * Click on column headers to sort
           </p>
         </div>
       </div>
@@ -122,21 +122,21 @@ export function SROPerformanceTable({ data }: SROPerformanceTableProps) {
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50">
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => requestSort('name')}>
-                  <div className="flex items-center gap-2">Nhân sự <SortIcon column="name" /></div>
+                  <div className="flex items-center gap-2">Personnel <SortIcon column="name" /></div>
                 </th>
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => requestSort('ticketsCreated')}>
-                  <div className="flex items-center gap-2">Tạo (Tickets) <SortIcon column="ticketsCreated" /></div>
+                  <div className="flex items-center gap-2">Created (Tickets) <SortIcon column="ticketsCreated" /></div>
                 </th>
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => requestSort('ticketsAssigned')}>
-                  <div className="flex items-center gap-2">Giao (Tickets) <SortIcon column="ticketsAssigned" /></div>
+                  <div className="flex items-center gap-2">Assigned (Tickets) <SortIcon column="ticketsAssigned" /></div>
                 </th>
-                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Dự toán (h)</th>
-                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Thực thi (h)</th>
-                <th className="py-4 px-8 text-[10px] font-black text-indigo-400 uppercase tracking-widest text-center">Điều phối (h)</th>
+                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Estimate (h)</th>
+                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actual (h)</th>
+                <th className="py-4 px-8 text-[10px] font-black text-indigo-400 uppercase tracking-widest text-center">Overhead (h)</th>
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors text-center" onClick={() => requestSort('efficiency')}>
-                  <div className="flex items-center justify-center gap-2">Hiệu suất (%) <SortIcon column="efficiency" /></div>
+                  <div className="flex items-center justify-center gap-2">Efficiency (%) <SortIcon column="efficiency" /></div>
                 </th>
-                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Đánh giá</th>
+                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Rating</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">

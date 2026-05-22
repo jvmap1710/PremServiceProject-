@@ -2,44 +2,44 @@ import { LayoutDashboard, Users, FileText, BarChart3, Settings, Mail } from "luc
 
 export const menuItems = [
   {
-    title: "Tổng quan",
+    title: "Overview",
     href: "/",
     icon: LayoutDashboard,
     roles: ["ADMIN", "TAS", "IMP_ENGINEER", "MANAGER"],
   },
   {
-    title: "Khách hàng",
+    title: "Clients",
     href: "/clients",
     icon: Users,
     roles: ["ADMIN", "TAS", "MANAGER"],
   },
   {
-    title: "Yêu cầu dịch vụ",
+    title: "Service Requests",
     href: "/requests",
     icon: FileText,
     roles: ["ADMIN", "TAS", "IMP_ENGINEER", "MANAGER"],
   },
   {
-    title: "Báo cáo & Thống kê",
+    title: "Reports & Analytics",
     href: "/reports",
     icon: BarChart3,
     roles: ["ADMIN", "TAS", "MANAGER"],
   },
   {
-    title: "Người dùng",
+    title: "Users",
     href: "/admin/users",
     icon: Users,
     roles: ["ADMIN"],
     isCategory: true,
   },
   {
-    title: "Cấu hình Email",
+    title: "Email Settings",
     href: "/admin/settings/email",
     icon: Mail,
     roles: ["ADMIN"],
   },
   {
-    title: "Cấu hình hệ thống",
+    title: "System Settings",
     href: "/admin/settings",
     icon: Settings,
     roles: ["ADMIN"],

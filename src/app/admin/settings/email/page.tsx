@@ -46,25 +46,25 @@ export default function EmailSettingsPage() {
     setStatus(null);
     const result = await updateEmailSettings(settings);
     if (result.success) {
-      setStatus({ type: 'success', message: "Đã lưu cấu hình email thành công!" });
+      setStatus({ type: 'success', message: "Email configuration saved successfully!" });
     } else {
-      setStatus({ type: 'error', message: result.error || "Có lỗi khi lưu cấu hình." });
+      setStatus({ type: 'error', message: result.error || "Error saving configuration." });
     }
     setSaving(false);
   };
 
   const handleTest = async () => {
     if (!testEmail) {
-      setStatus({ type: 'error', message: "Vui lòng nhập email để test." });
+      setStatus({ type: 'error', message: "Please enter an email to test." });
       return;
     }
     setTesting(true);
     setStatus(null);
     const result = await testEmailAction(testEmail);
     if (result.success) {
-      setStatus({ type: 'success', message: "Gửi email test thành công! Hãy kiểm tra hộp thư của bạn." });
+      setStatus({ type: 'success', message: "Test email sent successfully! Please check your inbox." });
     } else {
-      setStatus({ type: 'error', message: result.error || "Gửi email test thất bại." });
+      setStatus({ type: 'error', message: result.error || "Failed to send test email." });
     }
     setTesting(false);
   };
@@ -85,7 +85,7 @@ export default function EmailSettingsPage() {
         </Link>
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100">Email Settings</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Cấu hình SMTP để gửi thông báo hệ thống</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Configure SMTP for system notifications</p>
         </div>
       </div>
 
@@ -95,7 +95,7 @@ export default function EmailSettingsPage() {
           <form onSubmit={handleSave} className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
             <div className="flex items-center gap-2 mb-2">
               <Server className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Cấu hình SMTP</h2>
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">SMTP Configuration</h2>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -124,8 +124,8 @@ export default function EmailSettingsPage() {
             <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
               <Shield className="w-5 h-5 text-slate-400 dark:text-slate-600" />
               <div className="flex-1">
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Sử dụng kết nối bảo mật (SSL/TLS)</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Bật nếu server yêu cầu SSL (thường port 465)</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Use secure connection (SSL/TLS)</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Enable if server requires SSL (usually port 465)</p>
               </div>
               <button 
                 type="button"
@@ -145,7 +145,7 @@ export default function EmailSettingsPage() {
 
             <div className="space-y-4 pt-4 border-t border-slate-50">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tài khoản (Username)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Account (Username)</label>
                 <input 
                   value={settings.user}
                   onChange={(e) => setSettings(prev => ({ ...prev, user: e.target.value }))}
@@ -154,7 +154,7 @@ export default function EmailSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mật khẩu (App Password)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password (App Password)</label>
                 <input 
                   type="password"
                   value={settings.password}
@@ -167,7 +167,7 @@ export default function EmailSettingsPage() {
 
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email gửi đi</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sender Email</label>
                 <input 
                   value={settings.fromEmail}
                   onChange={(e) => setSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
@@ -176,7 +176,7 @@ export default function EmailSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tên hiển thị</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Display Name</label>
                 <input 
                   value={settings.fromName}
                   onChange={(e) => setSettings(prev => ({ ...prev, fromName: e.target.value }))}
@@ -192,7 +192,7 @@ export default function EmailSettingsPage() {
               className="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-100 dark:shadow-none"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Lưu cấu hình
+              Save Configuration
             </button>
           </form>
         </div>
@@ -202,16 +202,16 @@ export default function EmailSettingsPage() {
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 h-fit">
             <div className="flex items-center gap-2 mb-2">
               <Send className="w-5 h-5 text-orange-500" />
-              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Test Kết nối</h2>
+              <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Test Connection</h2>
             </div>
             
             <p className="text-xs text-slate-400 leading-relaxed">
-              Gửi một email thử nghiệm để đảm bảo các thông số SMTP trên là chính xác.
+              Send a test email to ensure SMTP parameters are correct.
             </p>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email nhận test</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recipient Email</label>
                 <input 
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
@@ -225,7 +225,7 @@ export default function EmailSettingsPage() {
                 className="w-full bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-all flex items-center justify-center gap-2 border border-orange-100 dark:border-orange-900/30"
               >
                 {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Gửi Email Test
+                Send Test Email
               </button>
             </div>
           </div>
@@ -236,7 +236,7 @@ export default function EmailSettingsPage() {
             }`}>
               {status.type === 'success' ? <CheckCircle2 className="w-6 h-6 shrink-0" /> : <AlertTriangle className="w-6 h-6 shrink-0" />}
               <div className="space-y-1">
-                <p className="text-sm font-black uppercase tracking-tight">{status.type === 'success' ? 'Thành công' : 'Thất bại'}</p>
+                <p className="text-sm font-black uppercase tracking-tight">{status.type === 'success' ? 'Success' : 'Failed'}</p>
                 <p className="text-xs font-medium leading-relaxed">{status.message}</p>
               </div>
             </div>

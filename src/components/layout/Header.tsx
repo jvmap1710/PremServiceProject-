@@ -9,7 +9,6 @@ import { ThemeToggle } from "../ThemeToggle";
 import Link from "next/link";
 import { getNotifications, markAsRead, markAllAsRead } from "@/actions/notification";
 import { formatDistanceToNow } from "date-fns";
-import { vi } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { toast } from "react-hot-toast";
@@ -40,11 +39,11 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pwdForm.new !== pwdForm.confirm) {
-      toast.error("Mật khẩu xác nhận không khớp!");
+      toast.error("Confirm password does not match!");
       return;
     }
     if (pwdForm.new.length < 6) {
-      toast.error("Mật khẩu mới phải có ít nhất 6 ký tự!");
+      toast.error("New password must be at least 6 characters!");
       return;
     }
 
@@ -53,7 +52,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Đổi mật khẩu thành công!");
+        toast.success("Password changed successfully!");
         setIsPasswordModalOpen(false);
         setPwdForm({ old: "", new: "", confirm: "" });
       }
@@ -97,9 +96,9 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
 
   const getRoleLabel = (role: string) => {
     switch(role.toUpperCase()) {
-      case "ADMIN": return "Quản trị";
-      case "TAS": return "Điều phối";
-      case "DEV": return "Kỹ thuật";
+      case "ADMIN": return "Admin";
+      case "TAS": return "Coordinator";
+      case "DEV": return "Engineer";
       default: return role;
     }
   };
@@ -112,7 +111,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
         <button
           onClick={handleToggleSidebar}
           className="lg:hidden p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors shrink-0"
-          aria-label="Mở menu"
+          aria-label="Open menu"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -129,7 +128,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
           <input
             type="text"
-            placeholder="Tìm kiếm yêu cầu, khách hàng..."
+            placeholder="Search requests, clients..."
             className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all font-medium text-slate-900 dark:text-slate-100"
             onBlur={() => setSearchOpen(false)}
             autoFocus={searchOpen}
@@ -179,19 +178,19 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
               <div className="fixed inset-0 z-40" onClick={() => setNotiOpen(false)} />
               <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Thông báo</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Notifications</h3>
                   {unreadCount > 0 && (
                     <button 
                       onClick={handleMarkAllAsRead}
                       className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      Đánh dấu tất cả đã đọc
+                      Mark all as read
                     </button>
                   )}
                 </div>
                 <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
                   {notifications.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 italic text-xs">Không có thông báo nào</div>
+                    <div className="p-8 text-center text-slate-400 italic text-xs">No notifications</div>
                   ) : (
                     notifications.map(n => (
                       <div 
@@ -207,7 +206,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
                         <p className="text-xs font-black text-slate-900 dark:text-slate-100 mb-1">{n.title}</p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{n.message}</p>
                         <p className="text-[9px] text-slate-400 dark:text-slate-600 mt-2 font-medium uppercase tracking-tight">
-                          {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: vi })}
+                          {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                         </p>
                       </div>
                     ))
@@ -227,7 +226,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
             className="flex items-center gap-2 md:gap-3 p-1 rounded-full hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors focus:outline-none"
           >
             <div className="text-right hidden md:block">
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none mb-1">Xin chào,</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest leading-none mb-1">Welcome,</p>
               <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate max-w-[150px] leading-none">
                 {userName} <span className="text-blue-600 dark:text-blue-400 font-bold text-[10px]">({getRoleLabel(userRole)})</span>
               </p>
@@ -250,7 +249,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   <Key className="w-4 h-4" />
-                  Đổi mật khẩu
+                  Change Password
                 </button>
                 <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
                 <form action={logOut} className="w-full">
@@ -259,7 +258,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 dark:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
-                    Đăng xuất
+                    Logout
                   </button>
                 </form>
               </div>
@@ -272,12 +271,12 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
       <Modal 
         isOpen={isPasswordModalOpen} 
         onClose={() => !isPending && setIsPasswordModalOpen(false)}
-        title="ĐỔI MẬT KHẨU"
+        title="CHANGE PASSWORD"
         maxWidth="max-w-md"
       >
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Mật khẩu hiện tại</label>
+            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Current Password</label>
             <input 
               type="password"
               value={pwdForm.old}
@@ -288,7 +287,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
             />
           </div>
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Mật khẩu mới</label>
+            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">New Password</label>
             <input 
               type="password"
               value={pwdForm.new}
@@ -299,7 +298,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
             />
           </div>
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Xác nhận mật khẩu mới</label>
+            <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Confirm New Password</label>
             <input 
               type="password"
               value={pwdForm.confirm}
@@ -314,7 +313,7 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
             disabled={isPending}
             className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] uppercase tracking-widest py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50 flex justify-center items-center gap-2"
           >
-            {isPending ? "Đang xử lý..." : <><CheckCircle2 className="w-4 h-4" /> Đổi Mật Khẩu</>}
+            {isPending ? "Processing..." : <><CheckCircle2 className="w-4 h-4" /> Change Password</>}
           </button>
         </form>
       </Modal>

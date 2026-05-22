@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 export default async function AdminPage() {
   const session = await auth();
 
-  // Kiểm tra quyền ngay tại server component cho chắc chắn
+  // Check permission directly at server component for security
   if (!session || (session.user as any).role !== "ADMIN") {
     redirect("/");
   }
@@ -17,7 +17,7 @@ export default async function AdminPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Admin Control Panel</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">Quản lý hệ thống và cấu hình dịch vụ Premium</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">System management and Premium service configuration</p>
           </div>
           <div className="flex items-center gap-3 p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
             <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center">
@@ -43,7 +43,7 @@ export default async function AdminPage() {
                 
                 <div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">Email Settings</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Cấu hình SMTP, giao thức gửi mail và thông báo tự động cho hệ thống.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Configure SMTP, email protocols, and automatic system notifications.</p>
                 </div>
 
                 <div className="flex items-center gap-2 text-blue-600 text-[10px] font-black uppercase tracking-widest">
@@ -65,7 +65,7 @@ export default async function AdminPage() {
                 
                 <div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">System Settings</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Quản lý giờ công định mức, mô hình doanh thu và các tham số toàn cục.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">Manage standard working hours, revenue models, and global parameters.</p>
                 </div>
 
                 <div className="flex items-center gap-2 text-indigo-600 text-[10px] font-black uppercase tracking-widest">
@@ -83,7 +83,7 @@ export default async function AdminPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-slate-400 dark:text-slate-500">User Management</h3>
-                  <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">Quản lý danh sách người dùng, phân quyền TAS/DEV và Admin.</p>
+                  <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">Manage user list, role assignment for TAS/DEV and Admin.</p>
                 </div>
                 <div className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest italic">Coming Soon</div>
               </div>
@@ -101,7 +101,7 @@ export default async function AdminPage() {
                 
                 <div>
                   <h3 className="text-xl font-black text-white">Back to Dashboard</h3>
-                  <p className="text-sm text-slate-400 mt-2 leading-relaxed">Quay lại bảng điều khiển chính để quản lý các yêu cầu dịch vụ.</p>
+                  <p className="text-sm text-slate-400 mt-2 leading-relaxed">Return to the main dashboard to manage service requests.</p>
                 </div>
 
                 <div className="flex items-center gap-2 text-white text-[10px] font-black uppercase tracking-widest">
@@ -116,9 +116,9 @@ export default async function AdminPage() {
         <div className="p-6 bg-amber-50 dark:bg-amber-900/10 rounded-3xl border border-amber-100 dark:border-amber-900/30 flex gap-4 items-start">
           <Shield className="w-6 h-6 text-amber-500 dark:text-amber-400 shrink-0" />
           <div>
-            <p className="text-sm font-black text-amber-900 dark:text-amber-200 uppercase tracking-tight">Khu vực nhạy cảm</p>
+            <p className="text-sm font-black text-amber-900 dark:text-amber-200 uppercase tracking-tight">Sensitive Area</p>
             <p className="text-xs font-medium text-amber-700 dark:text-amber-400 leading-relaxed mt-1">
-              Bạn đang truy cập vào khu vực quản trị. Mọi thay đổi cấu hình email sẽ ảnh hưởng đến khả năng gửi thông báo của toàn hệ thống. Hãy cẩn trọng khi chỉnh sửa các tham số SMTP.
+              You are accessing the administrative area. Any changes to email configuration will affect the system's ability to send notifications. Please be careful when editing SMTP parameters.
             </p>
           </div>
         </div>

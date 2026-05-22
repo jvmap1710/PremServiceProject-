@@ -12,7 +12,7 @@ export async function createClient(formData: FormData) {
   const address = formData.get("address") as string;
 
   if (!code || !name) {
-    return { error: "Mã khách hàng và Tên khách hàng là bắt buộc" };
+    return { error: "Client Code and Client Name are required" };
   }
 
   try {
@@ -32,9 +32,9 @@ export async function createClient(formData: FormData) {
   } catch (error: any) {
     console.error("Error creating client:", error);
     if (error.code === "P2002") {
-      return { error: "Mã khách hàng đã tồn tại" };
+      return { error: "Client code already exists" };
     }
-    return { error: "Đã xảy ra lỗi khi tạo khách hàng: " + (error.message || "") };
+    return { error: "Error creating client: " + (error.message || "") };
   }
 }
 
@@ -48,7 +48,7 @@ export async function updateClient(id: string, formData: FormData) {
   const isActive = formData.get("isActive") === "true";
 
   if (!code || !name) {
-    return { error: "Mã khách hàng và Tên khách hàng là bắt buộc" };
+    return { error: "Client Code and Client Name are required" };
   }
 
   try {
@@ -73,7 +73,7 @@ export async function updateClient(id: string, formData: FormData) {
     return { success: true };
   } catch (error: any) {
     console.error("Error updating client:", error);
-    return { error: "Đã xảy ra lỗi khi cập nhật khách hàng: " + (error.message || "") };
+    return { error: "Error updating client: " + (error.message || "") };
   }
 }
 

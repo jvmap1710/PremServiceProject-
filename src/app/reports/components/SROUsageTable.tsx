@@ -34,7 +34,7 @@ export function SROUsageTable({ data }: { data: any[] }) {
     <div className="space-y-4">
        <div className="flex justify-end px-6">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">
-            * Bấm vào tiêu đề bảng để sắp xếp nhanh
+            * Click on column headers to sort
           </p>
         </div>
       <div className="overflow-x-auto">
@@ -42,16 +42,16 @@ export function SROUsageTable({ data }: { data: any[] }) {
           <thead>
             <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
               <th className="px-6 py-4 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => requestSort('name')}>
-                <div className="flex items-center gap-2">Tên nghiệp vụ SRO <SortIcon column="name" /></div>
+                <div className="flex items-center gap-2">SRO Task Name <SortIcon column="name" /></div>
               </th>
               <th className="px-6 py-4 text-center cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => requestSort('count')}>
-                <div className="flex items-center justify-center gap-2">Tần suất dùng <SortIcon column="count" /></div>
+                <div className="flex items-center justify-center gap-2">Usage Frequency <SortIcon column="count" /></div>
               </th>
               <th className="px-6 py-4 text-right cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => requestSort('hours')}>
-                <div className="flex items-center justify-end gap-2">Tổng giờ thực tế <SortIcon column="hours" /></div>
+                <div className="flex items-center justify-end gap-2">Total Actual Hours <SortIcon column="hours" /></div>
               </th>
-              <th className="px-6 py-4 text-right">Định mức</th>
-              <th className="px-6 py-4 text-center">Trạng thái</th>
+              <th className="px-6 py-4 text-right">Estimate</th>
+              <th className="px-6 py-4 text-center">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -71,7 +71,7 @@ export function SROUsageTable({ data }: { data: any[] }) {
                     <span className={`px-3 py-1 rounded-full text-xs font-black ${
                       isUnused ? "bg-slate-100 text-slate-400" : "bg-blue-50 text-blue-600"
                     }`}>
-                      {item.count} lần
+                      {item.count} times
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right font-black text-slate-700 dark:text-slate-300">
@@ -84,17 +84,17 @@ export function SROUsageTable({ data }: { data: any[] }) {
                     {isUnused ? (
                       <div className="flex items-center justify-center gap-1 text-amber-500 bg-amber-50 px-3 py-1 rounded-full inline-flex">
                         <AlertTriangle className="w-3 h-3" />
-                        <span className="text-[10px] font-black uppercase">Không dùng</span>
+                        <span className="text-[10px] font-black uppercase">Unused</span>
                       </div>
                     ) : isHeavy ? (
                       <div className="flex items-center justify-center gap-1 text-emerald-500 bg-emerald-50 px-3 py-1 rounded-full inline-flex">
                         <CheckCircle2 className="w-3 h-3" />
-                        <span className="text-[10px] font-black uppercase">Dùng nhiều</span>
+                        <span className="text-[10px] font-black uppercase">Heavy Usage</span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center gap-1 text-blue-500 bg-blue-50 px-3 py-1 rounded-full inline-flex">
                         <Minus className="w-3 h-3" />
-                        <span className="text-[10px] font-black uppercase">Bình thường</span>
+                        <span className="text-[10px] font-black uppercase">Normal</span>
                       </div>
                     )}
                   </td>

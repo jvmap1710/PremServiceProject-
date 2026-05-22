@@ -11,9 +11,11 @@ export async function getKanbanColumns() {
   // Initialize defaults if empty
   if (cols.length === 0) {
     const defaults = [
-      { title: "Cần làm", statusKey: "TODO", order: 0 },
-      { title: "Đang xử lý", statusKey: "IN_PROGRESS", order: 1 },
-      { title: "Hoàn thành", statusKey: "DONE", order: 2 },
+      { title: "New", statusKey: "TODO", order: 0, color: "#94a3b8" },
+      { title: "In Progress", statusKey: "IN_PROGRESS", order: 1, color: "#6366f1" },
+      { title: "Completed", statusKey: "DONE", order: 2, color: "#10b981" },
+      { title: "Paused", statusKey: "PAUSED", order: 3, color: "#f59e0b" },
+      { title: "Closed", statusKey: "CLOSED", order: 4, color: "#6b7280" },
     ];
     
     for (const d of defaults) {

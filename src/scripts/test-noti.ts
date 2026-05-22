@@ -7,15 +7,15 @@ async function sendTest() {
     await prisma.notification.create({
       data: {
         userId: user.id,
-        title: '🚀 Hệ thống thông báo đã sẵn sàng!',
-        message: 'Chào sếp! Amelia đã kích hoạt thành công tính năng nhắc việc tự động cho tài khoản Admin JV. Chúc sếp một ngày làm việc hiệu quả!',
+        title: '🚀 Notification system is ready!',
+        message: 'Hello Boss! Amelia has successfully activated automatic task reminders for Admin JV account. Have a productive day!',
         type: 'ASSIGNMENT',
         link: '/'
       }
     });
-    console.log('✓ Đã bắn tin thành công cho Admin JV!');
+    console.log('✓ Successfully sent message to Admin JV!');
   } else {
-    console.log('X Không tìm thấy user JV');
+    console.log('X User JV not found');
   }
 }
 

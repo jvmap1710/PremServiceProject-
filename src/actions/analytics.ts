@@ -16,7 +16,7 @@ export interface PerformanceItem {
   ticketsCreated: number;
   estimate: number;
   actual: number;
-  overhead: number; // Thêm cột giờ overhead
+  overhead: number; // Add overhead hours column
   efficiency: number;
   rating: number;
 }
@@ -123,7 +123,7 @@ export async function getTASOperationalReports(
 
   const clientFilter = clientId === "all" ? {} : { clientId };
 
-  // Đảm bảo trạng thái các gói được cập nhật trước khi lấy báo cáo
+  // Ensure package statuses are updated before getting the report
   await syncPackageStatuses(clientId === "all" ? undefined : clientId);
 
   const [currentData, prevData, yoyData] = await Promise.all([
@@ -217,16 +217,16 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
 
   const now = new Date();
   const totalPackageRevenue = packages.reduce((sum, pkg) => {
-    // Tính số tháng mà gói này active TRONG khoảng thời gian report [start, end]
+    // Calculate the number of months this package is active WITHIN the report period [start, end]
     const pkgStart = pkg.validFrom > start ? pkg.validFrom : start;
     
-    // Thực tế (Accrual) chỉ tính đến ngày hôm nay (now) hoặc ngày kết thúc report, tùy cái nào đến trước
+    // Actual (Accrual) is only calculated up to today (now) or the report end date, whichever comes first
     const effectiveEnd = end < now ? end : now;
     const pkgEnd = pkg.validTo < effectiveEnd ? pkg.validTo : effectiveEnd;
     
-    if (pkgStart > pkgEnd) return sum; // Không overlap hoặc gói chưa bắt đầu tính đến nay
+    if (pkgStart > pkgEnd) return sum; // No overlap or package hasn't started yet
 
-    // Số tháng overlap (tối thiểu 1 nếu có overlap)
+    // Number of overlap months (minimum 1 if overlap exists)
     const overlapMonths = Math.max(1, (pkgEnd.getFullYear() - pkgStart.getFullYear()) * 12 + (pkgEnd.getMonth() - pkgStart.getMonth()) + 1);
     
     // Treat pkg.monthlyPrice as Annual Price
@@ -235,7 +235,7 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
   }, 0);
 
   const totalMonthlyQuota = packages.reduce((sum, pkg) => {
-    // Tương tự tính doanh thu, tính định mức giờ
+    // Similar to revenue calculation, calculate hour quota
     const pkgStart = pkg.validFrom > start ? pkg.validFrom : start;
     const pkgEnd = pkg.validTo < end ? pkg.validTo : end;
     if (pkgStart > pkgEnd) return sum;
@@ -249,10 +249,12 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
   const totalEstimatedHours = requests.reduce((sum, r) => sum + r.items.reduce((sum, i) => sum + (i.sroRule.estimateHours * (i.quantity || 1)), 0), 0);
 
   const typeDistribution = [
-    { name: "TASK", value: requests.filter(r => r.type === "TASK").length },
-    { name: "BUG", value: requests.filter(r => r.type === "BUG").length },
-    { name: "FEATURE", value: requests.filter(r => r.type === "FEATURE").length },
-    { name: "URGENT", value: requests.filter(r => r.type === "URGENT").length },
+    { name: "INCIDENT", value: requests.filter(r => r.type === "INCIDENT").length },
+    { name: "PROBLEM", value: requests.filter(r => r.type === "PROBLEM").length },
+    { name: "SRO", value: requests.filter(r => r.type === "SRO").length },
+    { name: "NSRO", value: requests.filter(r => r.type === "NSRO").length },
+    { name: "OTHERS", value: requests.filter(r => r.type === "OTHERS").length },
+    { name: "HEALTH_CHECK", value: requests.filter(r => r.type === "HEALTH_CHECK").length },
   ];
 
   const allRelevantUsers = await prisma.user.findMany({
@@ -276,23 +278,29 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
 
   // Aggregate stats from requests
   requests.forEach(req => {
-    // 1. Ghi nhận công lao Tạo Ticket (Dành cho TAS/Admin)
+    // 1. Credit for Creating Ticket (For TAS/Admin)
     if (req.createdById && performanceMap[req.createdById]) {
       performanceMap[req.createdById].ticketsCreated += 1;
     }
     
-    // 2. Ghi nhận công lao Xử lý Ticket (Dành cho Assignee - thường là Engineer)
-    if (req.assigneeId && performanceMap[req.assigneeId]) {
-      performanceMap[req.assigneeId].ticketsAssigned += 1;
-      // Chỉ tính estimate vào người được giao xử lý chính
-      performanceMap[req.assigneeId].estimate += req.items.reduce((sum, i) => sum + (i.sroRule.estimateHours * (i.quantity || 1)), 0);
-    }
+    // 2. Credit for Processing Ticket (For Assignee - usually Engineer)
+    const assignedIds = (req.assigneeIds || req.assigneeId || "")
+      .split(",")
+      .map(id => id.trim())
+      .filter(Boolean);
 
-    // 3. Ghi nhận thời gian thực tế (Dành cho bất kỳ ai tham gia log giờ)
+    assignedIds.forEach(uId => {
+      if (performanceMap[uId]) {
+        performanceMap[uId].ticketsAssigned += 1;
+        performanceMap[uId].estimate += req.items.reduce((sum, i) => sum + (i.sroRule.estimateHours * (i.quantity || 1)), 0);
+      }
+    });
+
+    // 3. Record actual time (For anyone who logged hours)
     req.workLogs.forEach(log => {
       if (log.userId && performanceMap[log.userId]) {
         const desc = log.description || "";
-        if (desc.includes("[ĐIỀU PHỐI]") || desc.includes("[COORDINATION]") || desc.includes("[TAS OVERHEAD]")) {
+        if (desc.includes("[COORDINATION]") || desc.includes("[TAS OVERHEAD]")) {
           performanceMap[log.userId].overhead += log.hours;
         } else {
           performanceMap[log.userId].actual += log.hours;
@@ -304,11 +312,11 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
   const sroPerformance = Object.values(performanceMap)
     .filter((item: any) => item.ticketsCreated > 0 || item.ticketsAssigned > 0 || item.actual > 0)
     .map((item: any) => {
-      // Hiệu suất chỉ tính nếu có cả dự toán và thực tế (tránh TAS bị 0% oan nếu không làm)
+      // Efficiency is only calculated if both estimate and actual exist (to avoid TAS getting 0% unfairly if they didn't work)
       const efficiency = item.actual > 0 ? (item.estimate / item.actual) * 100 : 0;
       
       let rating = 3;
-      if (item.actual === 0 && item.estimate === 0) rating = 0; // Không đánh giá nếu không trực tiếp làm
+      if (item.actual === 0 && item.estimate === 0) rating = 0; // No rating if not directly working
       else if (efficiency >= 110) rating = 5;
       else if (efficiency >= 90) rating = 4;
       else if (efficiency >= 70) rating = 3;
@@ -352,9 +360,9 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
     sroUsageAnalysis: await getSROUsageAnalysis(requests, clientId),
     completionRate: totalTickets > 0 ? (doneTickets / totalTickets) * 100 : 0,
     totalMonthlyQuota,
-    packages, // Trả về danh sách gói để hỗ trợ tính Remix
-    latestPriceMap, // Trả về giá mới nhất tuyệt đối theo khách hàng
-    tickets: requests, // Trả về danh sách ticket chi tiết cho export
+    packages, // Return list of packages to support Remix calculation
+    latestPriceMap, // Return absolute latest price by client
+    tickets: requests, // Return detailed ticket list for export
   };
 }
 
@@ -403,16 +411,16 @@ function calculateChange(current: any, previous: any) {
 
 function formatFiscalPeriod(start: Date, end: Date, type: PeriodType, vStart: number, vEnd: number, fyStart: number, fyEnd: number) {
   if (type === "MONTH") {
-    if (vStart === vEnd && fyStart === fyEnd) return `Tháng ${format(start, "MM/yyyy")}`;
-    return `Tháng ${format(start, "MM/yyyy")} - Tháng ${format(end, "MM/yyyy")}`;
+    if (vStart === vEnd && fyStart === fyEnd) return `Month ${format(start, "MM/yyyy")}`;
+    return `Month ${format(start, "MM/yyyy")} - Month ${format(end, "MM/yyyy")}`;
   }
   if (type === "QUARTER") {
-    if (vStart === vEnd && fyStart === fyEnd) return `Quý ${vStart} / ${fyStart} (${format(start, "MM/yy")} - ${format(end, "MM/yy")})`;
-    return `Quý ${vStart} / ${fyStart} - Quý ${vEnd} / ${fyEnd} (${format(start, "MM/yy")} - ${format(end, "MM/yy")})`;
+    if (vStart === vEnd && fyStart === fyEnd) return `Quarter ${vStart} / ${fyStart} (${format(start, "MM/yy")} - ${format(end, "MM/yy")})`;
+    return `Quarter ${vStart} / ${fyStart} - Quarter ${vEnd} / ${fyEnd} (${format(start, "MM/yy")} - ${format(end, "MM/yy")})`;
   }
-  if (type === "CUSTOM") return `Từ ${format(start, "dd/MM/yy")} đến ${format(end, "dd/MM/yy")}`;
-  if (fyStart === fyEnd) return `Năm ${fyStart} (04/${fyStart} - 03/${fyStart + 1})`;
-  return `Năm ${fyStart} - ${fyEnd} (04/${fyStart} - 03/${fyEnd + 1})`;
+  if (type === "CUSTOM") return `From ${format(start, "MM/dd/yy")} to ${format(end, "MM/dd/yy")}`;
+  if (fyStart === fyEnd) return `Year ${fyStart} (04/${fyStart} - 03/${fyStart + 1})`;
+  return `Year ${fyStart} - ${fyEnd} (04/${fyStart} - 03/${fyEnd + 1})`;
 }
 
 export async function getFinancialSettings() {
@@ -455,10 +463,10 @@ export async function updateFinancialSettings(data: {
 
   // Validation: No negative values
   if (data.standardMonthlyHours !== undefined && data.standardMonthlyHours < 1) {
-    throw new Error("Giờ định mức phải lớn hơn 0");
+    throw new Error("Standard hours must be greater than 0");
   }
   if (data.revenuePerSroHour !== undefined && data.revenuePerSroHour < 0) {
-    throw new Error("Đơn giá SRO không được âm");
+    throw new Error("SRO unit price cannot be negative");
   }
 
   if (data.standardMonthlyHours !== undefined || data.revenueMode !== undefined || data.revenuePerSroHour !== undefined) {

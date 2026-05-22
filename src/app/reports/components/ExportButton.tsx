@@ -9,6 +9,7 @@ interface ExportButtonProps {
   data: any;
   periodLabel: string;
   userRole?: string;
+  users?: any[];
   financialRates: {
     userSalaries: Record<string, number>;
     standardMonthlyHours: number;
@@ -18,14 +19,14 @@ interface ExportButtonProps {
   };
 }
 
-export function ExportButton({ data, periodLabel, userRole, financialRates }: ExportButtonProps) {
+export function ExportButton({ data, periodLabel, userRole, users = [], financialRates }: ExportButtonProps) {
   const exportToExcel = async () => {
     if (!data || !data.current) return;
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'PremiumService System';
     
-    // Màu sắc chủ đạo
+    // Main colors
     const colors = {
       header: 'FF1E293B', // Slate 800
       accent: 'FF4F46E5', // Indigo 600
@@ -36,21 +37,21 @@ export function ExportButton({ data, periodLabel, userRole, financialRates }: Ex
     };
 
     const formatVND = (val: number) => {
-      return new Intl.NumberFormat('vi-VN').format(val);
+      return new Intl.NumberFormat('en-US').format(val);
     };
 
-    // --- SHEET 1: TỔNG QUAN (KPI) ---
-    const summarySheet = workbook.addWorksheet('TỔNG QUAN KPI');
+    // --- SHEET 1: OVERVIEW (KPI) ---
+    const summarySheet = workbook.addWorksheet('KPI OVERVIEW');
     summarySheet.columns = [{ width: 35 }, { width: 25 }, { width: 15 }, { width: 40 }];
     
     summarySheet.mergeCells('A1:D1');
     const titleCell = summarySheet.getCell('A1');
-    titleCell.value = `BÁO CÁO VẬN HÀNH PREMIUM SERVICE - ${periodLabel.toUpperCase()}`;
+    titleCell.value = `PREMIUM SERVICE OPERATION REPORT - ${periodLabel.toUpperCase()}`;
     titleCell.font = { size: 16, bold: true, color: { argb: colors.header } };
     titleCell.alignment = { horizontal: 'center' };
 
     summarySheet.addRow([]);
-    summarySheet.addRow(['CHỈ SỐ KPI', 'GIÁ TRỊ', 'ĐƠN VỊ', 'DIỄN GIẢI']);
+    summarySheet.addRow(['KPI INDICATOR', 'VALUE', 'UNIT', 'DESCRIPTION']);
     summarySheet.getRow(3).eachCell(cell => {
       cell.font = { bold: true, color: { argb: colors.textWhite } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.accent } };
@@ -59,26 +60,26 @@ export function ExportButton({ data, periodLabel, userRole, financialRates }: Ex
     const efficiencyRatio = data.current.totalEstimatedHours > 0 ? (data.current.totalActualHours / data.current.totalEstimatedHours) * 100 : 0;
     
     summarySheet.addRows([
-      ['Tỷ lệ Hiệu suất (Actual/Est)', efficiencyRatio.toFixed(1), '%', 'Độ chính xác của việc dự đoán giờ'],
-      ['Tỷ lệ Đạt SLA', data.current.slaComplianceRate.toFixed(1), '%', 'Tỷ lệ hoàn thành đúng hạn'],
-      ['Tỷ lệ Hoàn thành', data.current.completionRate.toFixed(1), '%', 'Tỷ lệ Ticket đã đóng / Tổng số'],
-      ['Tổng số Ticket phát sinh', data.current.totalTickets, 'Ticket', 'Khối lượng yêu cầu trong kỳ'],
-      ['Tổng giờ thực tế (ACT)', data.current.totalActualHours.toFixed(1), 'Giờ', 'Tổng thời gian bỏ ra thực tế'],
-      ['Tổng giờ dự toán (EST)', data.current.totalEstimatedHours.toFixed(1), 'Giờ', 'Tổng định mức giờ cho các đầu việc'],
+      ['Efficiency Ratio (Actual/Est)', efficiencyRatio.toFixed(1), '%', 'Accuracy of hour estimation'],
+      ['SLA Compliance Rate', data.current.slaComplianceRate.toFixed(1), '%', 'On-time completion rate'],
+      ['Completion Rate', data.current.completionRate.toFixed(1), '%', 'Closed Tickets / Total'],
+      ['Total Ticket Volume', data.current.totalTickets, 'Ticket', 'Total requests in period'],
+      ['Total Actual Hours (ACT)', data.current.totalActualHours.toFixed(1), 'Hours', 'Actual time spent'],
+      ['Total Estimated Hours (EST)', data.current.totalEstimatedHours.toFixed(1), 'Hours', 'Total estimated quota'],
     ]);
 
-    // --- SHEET 2: HỢP NHẤT CHIẾN LƯỢC (TÀI CHÍNH) ---
+    // --- SHEET 2: STRATEGIC CONSOLIDATION (FINANCIAL) ---
     if (userRole === "ADMIN" || userRole === "MANAGER" || userRole === "TAS") {
-      const remixSheet = workbook.addWorksheet('CHIẾN LƯỢC TÀI CHÍNH');
+      const remixSheet = workbook.addWorksheet('FINANCIAL STRATEGY');
       remixSheet.columns = [{ width: 35 }, { width: 25 }, { width: 25 }, { width: 20 }];
 
       remixSheet.mergeCells('A1:D1');
-      remixSheet.getCell('A1').value = 'SO SÁNH PHƯƠNG ÁN TÀI CHÍNH (STRATEGIC REMIX)';
+      remixSheet.getCell('A1').value = 'FINANCIAL STRATEGY COMPARISON (STRATEGIC REMIX)';
       remixSheet.getCell('A1').font = { bold: true, size: 14, color: { argb: colors.gold } };
       remixSheet.getCell('A1').alignment = { horizontal: 'center' };
 
       remixSheet.addRow([]);
-      remixSheet.addRow(['Hạng mục', 'Phân bổ thực tế (ACCRUAL)', 'Dự phóng gói mới (PROJECTED)', 'Ghi chú']);
+      remixSheet.addRow(['Category', 'Actual Allocation (ACCRUAL)', 'New Package Projection (PROJECTED)', 'Notes']);
       remixSheet.getRow(3).eachCell(cell => {
         cell.font = { bold: true, color: { argb: colors.textWhite } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.header } };
@@ -106,10 +107,10 @@ export function ExportButton({ data, periodLabel, userRole, financialRates }: Ex
       const projectedMargin = projectedRev > 0 ? (projectedProfit / projectedRev) * 100 : 0;
 
       remixSheet.addRows([
-        ['Doanh thu (Revenue)', formatVND(accrualRev), formatVND(projectedRev), 'ACR: Theo gói thật | PRJ: Theo giá mới nhất'],
-        ['Giá vốn nhân sự (Labor Cost)', formatVND(accrualCost), formatVND(projectedCost), 'Tính dựa trên lương và giờ làm thực tế'],
-        ['Lợi nhuận gộp (Profit)', formatVND(accrualProfit), formatVND(projectedProfit), 'Doanh thu - Giá vốn'],
-        ['Tỷ suất lợi nhuận (%)', accrualMargin.toFixed(1) + '%', projectedMargin.toFixed(1) + '%', 'Hiệu quả kinh doanh ròng'],
+        ['Revenue', formatVND(accrualRev), formatVND(projectedRev), 'ACR: Real pkg | PRJ: Latest price'],
+        ['Labor Cost', formatVND(accrualCost), formatVND(projectedCost), 'Based on salary and actual hours'],
+        ['Gross Profit', formatVND(accrualProfit), formatVND(projectedProfit), 'Revenue - Labor Cost'],
+        ['Profit Margin (%)', accrualMargin.toFixed(1) + '%', projectedMargin.toFixed(1) + '%', 'Net business efficiency'],
       ]);
 
       // Highlight results
@@ -117,19 +118,19 @@ export function ExportButton({ data, periodLabel, userRole, financialRates }: Ex
       remixSheet.getCell('C6').font = { color: { argb: projectedProfit >= 0 ? colors.emerald : colors.rose }, bold: true };
     }
 
-    // --- SHEET 3: DANH SÁCH TICKET CHI TIẾT ---
-    const ticketSheet = workbook.addWorksheet('DANH SÁCH TICKET');
+    // --- SHEET 3: DETAILED TICKET LIST ---
+    const ticketSheet = workbook.addWorksheet('TICKET LIST');
     ticketSheet.columns = [
-      { header: 'MÃ SỐ', key: 'code', width: 15 },
-      { header: 'TIÊU ĐỀ', key: 'title', width: 40 },
-      { header: 'TRẠNG THÁI', key: 'status', width: 15 },
-      { header: 'LOẠI', key: 'type', width: 12 },
-      { header: 'MỨC ĐỘ', key: 'priority', width: 12 },
-      { header: 'NGÀY PHÁT SINH', key: 'raiseDate', width: 20 },
-      { header: 'NGÀY HẾT HẠN', key: 'deadline', width: 20 },
-      { header: 'NGƯỜI XỬ LÝ', key: 'assignee', width: 20 },
-      { header: 'GIỜ (EST)', key: 'est', width: 10 },
-      { header: 'GIỜ (ACT)', key: 'act', width: 10 },
+      { header: 'CODE', key: 'code', width: 15 },
+      { header: 'TITLE', key: 'title', width: 40 },
+      { header: 'STATUS', key: 'status', width: 15 },
+      { header: 'TYPE', key: 'type', width: 12 },
+      { header: 'PRIORITY', key: 'priority', width: 12 },
+      { header: 'CREATED DATE', key: 'raiseDate', width: 20 },
+      { header: 'DEADLINE', key: 'deadline', width: 20 },
+      { header: 'ASSIGNEE', key: 'assignee', width: 20 },
+      { header: 'EST HOURS', key: 'est', width: 10 },
+      { header: 'ACT HOURS', key: 'act', width: 10 },
     ];
 
     ticketSheet.getRow(1).eachCell(cell => {
@@ -141,6 +142,19 @@ export function ExportButton({ data, periodLabel, userRole, financialRates }: Ex
     // Assuming getTASOperationalReports returns tickets in data.current.tickets
     if (data.current.tickets) {
       data.current.tickets.forEach((t: any) => {
+        const ids = (t.assigneeIds || "").split(",").map((id: string) => id.trim()).filter(Boolean);
+        let assigneeNames = 'Unassigned';
+        if (ids.length > 0) {
+          assigneeNames = ids.map((id: string) => {
+            const found = users?.find((u: any) => u.id === id);
+            if (found) return found.name;
+            if (t.assignee && t.assignee.id === id) return t.assignee.name;
+            return id;
+          }).join(", ");
+        } else if (t.assignee?.name) {
+          assigneeNames = t.assignee.name;
+        }
+
         ticketSheet.addRow({
           code: t.code,
           title: t.title,
@@ -149,22 +163,22 @@ export function ExportButton({ data, periodLabel, userRole, financialRates }: Ex
           priority: t.priority,
           raiseDate: t.raiseDate ? format(new Date(t.raiseDate), "dd/MM/yyyy") : '-',
           deadline: t.deadline ? format(new Date(t.deadline), "dd/MM/yyyy") : '-',
-          assignee: t.assignee?.name || 'Chưa gán',
+          assignee: assigneeNames,
           est: t.totalEst || 0,
           act: t.totalAct || 0
         });
       });
     }
 
-    // --- SHEET 4: CHI TIẾT SRO & HIỆU SUẤT ---
-    const sroSheet = workbook.addWorksheet('HIỆU SUẤT NHÂN SỰ & SRO');
+    // --- SHEET 4: SRO DETAILS & PERFORMANCE ---
+    const sroSheet = workbook.addWorksheet('SRO & PERSONNEL PERFORMANCE');
     sroSheet.columns = [
-      { header: 'NHÂN SỰ', key: 'name', width: 25 },
-      { header: 'VAI TRÒ', key: 'role', width: 15 },
-      { header: 'TICKET', key: 'tickets', width: 10 },
-      { header: 'GIỜ DỰ TOÁN (EST)', key: 'estimate', width: 20 },
-      { header: 'GIỜ THỰC TẾ (ACT)', key: 'actual', width: 20 },
-      { header: 'HIỆU SUẤT (%)', key: 'efficiency', width: 15 },
+      { header: 'PERSONNEL', key: 'name', width: 25 },
+      { header: 'ROLE', key: 'role', width: 15 },
+      { header: 'TICKETS', key: 'tickets', width: 10 },
+      { header: 'ESTIMATED HOURS', key: 'estimate', width: 20 },
+      { header: 'ACTUAL HOURS', key: 'actual', width: 20 },
+      { header: 'EFFICIENCY (%)', key: 'efficiency', width: 15 },
     ];
 
     sroSheet.getRow(1).eachCell(cell => {
@@ -183,11 +197,11 @@ export function ExportButton({ data, periodLabel, userRole, financialRates }: Ex
       });
     });
 
-    // Xuất file
+    // Export file
     const buffer = await workbook.xlsx.writeBuffer();
     const dateStr = format(new Date(), "yyyyMMdd_HHmm");
     const clientName = data.client?.name || "ALL_CLIENTS";
-    saveAs(new Blob([buffer]), `BAO_CAO_PREMIUM_${clientName}_${dateStr}.xlsx`);
+    saveAs(new Blob([buffer]), `PREMIUM_REPORT_${clientName}_${dateStr}.xlsx`);
   };
 
   return (
@@ -197,7 +211,7 @@ export function ExportButton({ data, periodLabel, userRole, financialRates }: Ex
       className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white disabled:opacity-30 rounded-xl text-[10px] font-black transition-all border border-emerald-100 dark:border-emerald-800/50 uppercase tracking-widest active:scale-95 whitespace-nowrap shadow-sm"
     >
       <FileSpreadsheet className="w-4 h-4" />
-      <span>XUẤT EXCEL (FULL DATA)</span>
+      <span>EXPORT EXCEL (FULL DATA)</span>
     </button>
   );
 }

@@ -35,12 +35,12 @@ export async function getDashboardStats() {
   }, 0);
 
   // Map groups to the expected format for charts
-  const statusCounts = ["TODO", "IN_PROGRESS", "DONE"].map(status => ({
+  const statusCounts = ["TODO", "IN_PROGRESS", "DONE", "PAUSED", "CLOSED"].map(status => ({
     name: status,
     value: statusGroups.find(g => g.status === status)?._count || 0
   }));
 
-  const typeCounts = ["TASK", "BUG", "FEATURE", "URGENT"].map(type => ({
+  const typeCounts = ["INCIDENT", "PROBLEM", "SRO", "NSRO", "OTHERS", "HEALTH_CHECK"].map(type => ({
     name: type,
     value: typeGroups.find(g => g.type === type)?._count || 0
   }));

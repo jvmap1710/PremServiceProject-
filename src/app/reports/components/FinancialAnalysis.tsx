@@ -27,7 +27,7 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
   if (!data) return null;
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
   };
 
   // 1. Calculate Revenue
@@ -36,7 +36,7 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
     : rates.packageRevenue;
 
   if (isRemixMode && remixStrategy === 'LATEST' && data.packages?.length > 0) {
-    // Nhóm các gói theo khách hàng
+    // Group packages by client
     const packagesByClient: Record<string, any[]> = {};
     data.packages.forEach((pkg: any) => {
       if (!packagesByClient[pkg.clientId]) packagesByClient[pkg.clientId] = [];
@@ -47,18 +47,18 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
     const start = new Date(data.period?.start || new Date());
     const end = new Date(data.period?.end || new Date());
 
-    // Tính tổng số tháng trong TOÀN BỘ kỳ report (ví dụ FY 2025 là 12 tháng)
+    // Calculate total months in ENTIRE report period (e.g. FY 2025 is 12 months)
     const reportStart = new Date(period?.start || new Date());
     const reportEnd = new Date(period?.end || new Date());
     
-    // Dùng công thức chuẩn để ra đúng số tháng (ví dụ T4/2025 -> T3/2026 là 12 tháng)
+    // Use standard formula to get exact months (e.g. Apr 2025 -> Mar 2026 is 12 months)
     const totalReportMonths = (reportEnd.getFullYear() - reportStart.getFullYear()) * 12 + (reportEnd.getMonth() - reportStart.getMonth()) + 1;
 
     Object.entries(packagesByClient).forEach(([clientId, clientPkgs]) => {
-      // Lấy giá mới nhất tuyệt đối từ Server
+      // Get absolute latest price from Server
       const latestPrice = data.latestPriceMap?.[clientId] || 0;
       
-      // Theo ý sếp A: Áp giá này cho TOÀN BỘ kỳ báo cáo
+      // Boss A's idea: Apply this price to ENTIRE report period
       projectedSum += (latestPrice / 12) * totalReportMonths;
     });
 
@@ -128,9 +128,9 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
             <div>
               <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
                 <Settings2 className="w-6 h-6 text-indigo-600" />
-                Cấu hình tài chính (Finance Setup)
+                Finance Setup
               </h2>
-              <p className="text-slate-500 text-xs font-medium mt-1">Cài đặt doanh thu gói và lương nhân sự để tính lợi nhuận ròng</p>
+              <p className="text-slate-500 text-xs font-medium mt-1">Configure package revenue and salaries to calculate net profit</p>
             </div>
           </div>
             
@@ -140,31 +140,31 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
                   onClick={() => setRemixStrategy('REALTIME')}
                   className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${remixStrategy === 'REALTIME' ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-400'}`}
                 >
-                  PHÂN BỔ THỰC TẾ (ACCRUAL)
+                  ACTUAL ALLOCATION (ACCRUAL)
                 </button>
                 <button 
                   onClick={() => setRemixStrategy('LATEST')}
                   className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${remixStrategy === 'LATEST' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}
                 >
-                  DỰ PHÓNG GÓI MỚI (PROJECTED)
+                  NEW PACKAGE PROJECTION (PROJECTED)
                 </button>
               </div>
             )}
 
             <div className="bg-emerald-50 dark:bg-emerald-900/30 px-6 py-3 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-4">
               <div className="flex flex-col">
-                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Tổng Doanh thu Gói (Hợp đồng):</span>
+                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Total Package Revenue:</span>
                 <span className="text-xl font-black text-emerald-700 dark:text-emerald-300">{formatCurrency(totalRevenue)}</span>
               </div>
               <div className="h-8 w-px bg-emerald-200 dark:bg-emerald-800" />
               <div className="flex flex-col">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Phương thức:</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Method:</span>
                 <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Fixed Package Price</span>
               </div>
             </div>
             
             <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-3">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Giờ định mức (Full-time):</label>
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Standard Hours (Full-time):</label>
               <input 
                 type="number" 
                 value={rates.standardMonthlyHours} 
@@ -179,14 +179,14 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
             <thead>
               <tr className="bg-slate-50/30 dark:bg-slate-800/20">
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('name')}>
-                  <div className="flex items-center gap-2">Nhân sự <SortIcon column="name" /></div>
+                  <div className="flex items-center gap-2">Personnel <SortIcon column="name" /></div>
                 </th>
-                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vai trò</th>
+                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</th>
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => requestSort('salary')}>
-                  <div className="flex items-center gap-2">Lương tháng (VNĐ) <SortIcon column="salary" /></div>
+                  <div className="flex items-center gap-2">Monthly Salary (VND) <SortIcon column="salary" /></div>
                 </th>
-                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Giá vốn / giờ</th>
-                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Thao tác</th>
+                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Cost / Hour</th>
+                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -335,7 +335,7 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
             <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 rounded-2xl text-indigo-600">
               <Wallet className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Doanh thu</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Revenue</span>
           </div>
           <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{formatCurrency(totalRevenue)}</p>
         </div>
@@ -345,7 +345,7 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
             <div className="p-3 bg-rose-50 dark:bg-rose-950/50 rounded-2xl text-rose-600">
               <Users className="w-6 h-6" />
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Giá vốn</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cost</span>
           </div>
           <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{formatCurrency(totalCost)}</p>
         </div>
@@ -356,7 +356,7 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
               <div className="p-3 bg-white/10 rounded-2xl">
                 <TrendingUp className="w-6 h-6" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">Lợi nhuận ròng</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">Net Profit</span>
             </div>
             <p className="text-3xl font-black text-white tracking-tight">{formatCurrency(profit)}</p>
             <div className="flex items-center gap-2 mt-2">
@@ -376,21 +376,21 @@ export function FinancialAnalysis({ data, period, users, rates, onUpdateRate, is
         <div className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
           <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-600" />
-            Chi tiết hiệu quả nhân sự (Labor Efficiency)
+            Labor Efficiency Detail
           </h3>
-          <p className="text-[9px] font-black text-slate-400 uppercase">* Bấm vào tiêu đề bảng để sắp xếp nhanh</p>
+          <p className="text-[9px] font-black text-slate-400 uppercase">* Click column header to sort</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50">
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => requestSort('name')}>
-                  <div className="flex items-center gap-2">Nhân sự <SortIcon column="name" /></div>
+                  <div className="flex items-center gap-2">Personnel <SortIcon column="name" /></div>
                 </th>
                 <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors text-right" onClick={() => requestSort('actual')}>
-                  <div className="flex items-center justify-end gap-2 text-right">Giờ thực tế <SortIcon column="actual" /></div>
+                  <div className="flex items-center justify-end gap-2 text-right">Actual Hours <SortIcon column="actual" /></div>
                 </th>
-                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Chi phí (Trung bình)</th>
+                <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Cost (Average)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">

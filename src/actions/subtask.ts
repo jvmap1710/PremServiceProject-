@@ -7,7 +7,7 @@ import { subTaskSchema } from "@/lib/validations";
 
 export async function createSubTask(requestId: string, content: string, description?: string) {
   const session = await auth();
-  if (!session) return { error: "Bạn cần đăng nhập để tạo sub-task" };
+  if (!session) return { error: "You need to log in to create a sub-task" };
 
   // 1. Zod Validation
   const validation = subTaskSchema.safeParse({ requestId, content, description });
@@ -29,7 +29,7 @@ export async function createSubTask(requestId: string, content: string, descript
     return { success: true, subTask };
   } catch (error: any) {
     console.error("Error creating sub-task:", error);
-    return { error: `Lỗi tạo sub-task: ${error.message}` };
+    return { error: `Error creating sub-task: ${error.message}` };
   }
 }
 
@@ -44,7 +44,7 @@ export async function updateSubTask(id: string, requestId: string, data: { conte
     return { success: true };
   } catch (error: any) {
     console.error("Error updating sub-task:", error);
-    return { error: `Lỗi cập nhật sub-task: ${error.message}` };
+    return { error: `Error updating sub-task: ${error.message}` };
   }
 }
 
@@ -58,6 +58,6 @@ export async function deleteSubTask(id: string, requestId: string) {
     return { success: true };
   } catch (error: any) {
     console.error("Error deleting sub-task:", error);
-    return { error: `Lỗi xóa sub-task: ${error.message}` };
+    return { error: `Error deleting sub-task: ${error.message}` };
   }
 }

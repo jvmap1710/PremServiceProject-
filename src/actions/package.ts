@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 export async function createPremiumPackage(formData: FormData) {
   const session = await auth();
   if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
-    return { error: "Bạn không có quyền thực hiện hành động này" };
+    return { error: "You do not have permission to perform this action" };
   }
 
   const clientId = formData.get("clientId") as string;
@@ -16,10 +16,10 @@ export async function createPremiumPackage(formData: FormData) {
   const validTo = formData.get("validTo") as string;
   const rawPrice = formData.get("monthlyPrice") as string;
   const monthlyPrice = parseFloat(rawPrice?.replace(/[^0-9.-]/g, '')) || 0;
-  const monthlyQuota = 0; // Tự động tính
+  const monthlyQuota = 0; // Auto-calculated
 
   if (!clientId || !name || !validFrom || !validTo) {
-    return { error: "Vui lòng điền đầy đủ thông tin hợp lệ" };
+    return { error: "Please fill in all required fields validly" };
   }
 
   try {
@@ -31,18 +31,18 @@ export async function createPremiumPackage(formData: FormData) {
         validTo: new Date(validTo),
         monthlyQuota,
         monthlyPrice,
-        isActive: true, // Mặc định là active khi tạo mới
+        isActive: true, // Default active on creation
       },
     });
 
-    // Sau khi tạo, đảm bảo sync lại trạng thái (nếu có gói khác đang active thì deactive gói cũ)
+    // After creation, sync states (deactivate older active packages if any)
     await syncPackageStatuses(clientId);
 
     revalidatePath(`/clients/${clientId}`);
     return { success: true };
   } catch (error: any) {
     console.error("Error in createPremiumPackage:", error);
-    return { error: error.message || "Đã xảy ra lỗi khi tạo gói Premium" };
+    return { error: error.message || "Error occurred while creating Premium package" };
   }
 }
 
@@ -50,7 +50,7 @@ export async function syncPackageStatuses(clientId?: string) {
   try {
     const now = new Date();
     
-    // 1. Tự động deactive các gói đã hết hạn
+    // 1. Auto deactivate expired packages
     await prisma.premiumPackage.updateMany({
       where: {
         ...(clientId ? { clientId } : {}),
@@ -60,16 +60,16 @@ export async function syncPackageStatuses(clientId?: string) {
       data: { isActive: false }
     });
 
-    // 2. Đảm bảo mỗi khách hàng chỉ có tối đa 1 gói Active (gói mới nhất trong tương lai/hiện tại)
-    // Nếu có nhiều gói cùng Valid, giữ gói có ID lớn nhất hoặc ngày tạo mới nhất
+    // 2. Ensure each client has max 1 Active package (newest package in future/present)
+    // If multiple valid packages, keep the one with largest ID or newest creation date
     if (clientId) {
       const activePackages = await prisma.premiumPackage.findMany({
         where: { clientId, isActive: true },
         orderBy: { validFrom: 'desc' }
       });
 
-      if (activePackages.length > 1) {
-        const [keep, ...others] = activePackages;
+      if (activePackages.length > 2) {
+        const [keep1, keep2, ...others] = activePackages;
         await prisma.premiumPackage.updateMany({
           where: { id: { in: others.map(p => p.id) } },
           data: { isActive: false }
@@ -80,14 +80,14 @@ export async function syncPackageStatuses(clientId?: string) {
     return { success: true };
   } catch (error) {
     console.error("Error syncing package statuses:", error);
-    return { error: "Không thể đồng bộ trạng thái gói" };
+    return { error: "Could not sync package statuses" };
   }
 }
 
 export async function updatePremiumPackage(formData: FormData) {
   const session = await auth();
   if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
-    return { error: "Bạn không có quyền thực hiện hành động này" };
+    return { error: "You do not have permission to perform this action" };
   }
 
   const id = formData.get("id") as string;
@@ -100,7 +100,7 @@ export async function updatePremiumPackage(formData: FormData) {
   const isActive = formData.get("isActive") === "true";
 
   if (!id || !clientId || !name || !validFrom || !validTo) {
-    return { error: "Vui lòng điền đầy đủ thông tin hợp lệ" };
+    return { error: "Please fill in all required fields validly" };
   }
 
   try {
@@ -123,14 +123,14 @@ export async function updatePremiumPackage(formData: FormData) {
     return { success: true };
   } catch (error: any) {
     console.error("Error in updatePremiumPackage:", error);
-    return { error: error.message || "Đã xảy ra lỗi khi cập nhật gói Premium" };
+    return { error: error.message || "Error occurred while updating Premium package" };
   }
 }
 
 export async function deletePremiumPackage(id: string, clientId: string) {
   const session = await auth();
   if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
-    return { error: "Bạn không có quyền thực hiện hành động này" };
+    return { error: "You do not have permission to perform this action" };
   }
   
   try {
@@ -141,14 +141,14 @@ export async function deletePremiumPackage(id: string, clientId: string) {
     revalidatePath(`/clients/${clientId}`);
     return { success: true };
   } catch (error) {
-    return { error: "Đã xảy ra lỗi khi xóa gói Premium" };
+    return { error: "Error occurred while deleting Premium package" };
   }
 }
 
 export async function addSRORule(formData: FormData) {
   const session = await auth();
   if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
-    return { error: "Bạn không có quyền thực hiện hành động này" };
+    return { error: "You do not have permission to perform this action" };
   }
 
   const packageId = formData.get("packageId") as string;
@@ -156,10 +156,11 @@ export async function addSRORule(formData: FormData) {
   const scope = formData.get("scope") as string | null;
   const exclusions = formData.get("exclusions") as string | null;
   const estimateHours = parseFloat(formData.get("estimateHours") as string);
-  const requestsPerMonth = parseInt(formData.get("requestsPerMonth") as string);
+  const requestsPerMonth = parseFloat(formData.get("requestsPerMonth") as string);
+  const notes = formData.get("notes") as string | null;
 
   if (!packageId || !taskName || isNaN(estimateHours) || isNaN(requestsPerMonth)) {
-    return { error: "Vui lòng điền đầy đủ thông tin hợp lệ" };
+    return { error: "Please fill in all required fields validly" };
   }
 
   try {
@@ -168,7 +169,7 @@ export async function addSRORule(formData: FormData) {
       select: { id: true, clientId: true, monthlyQuota: true }
     });
 
-    if (!pkg) return { error: "Gói không tồn tại" };
+    if (!pkg) return { error: "Package does not exist" };
 
     await prisma.sRORule.create({
       data: {
@@ -178,6 +179,7 @@ export async function addSRORule(formData: FormData) {
         exclusions,
         estimateHours,
         requestsPerMonth,
+        notes,
       },
     });
 
@@ -199,14 +201,14 @@ export async function addSRORule(formData: FormData) {
     return { success: true };
   } catch (error: any) {
     console.error("DEBUG - Error in addSRORule:", error);
-    return { error: `Lỗi hệ thống: ${error.message || "Không xác định"}` };
+    return { error: `System error: ${error.message || "Unknown"}` };
   }
 }
 
 export async function updateSRORule(formData: FormData) {
   const session = await auth();
   if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
-    return { error: "Bạn không có quyền thực hiện hành động này" };
+    return { error: "You do not have permission to perform this action" };
   }
 
   const id = formData.get("id") as string;
@@ -215,11 +217,12 @@ export async function updateSRORule(formData: FormData) {
   const scope = formData.get("scope") as string | null;
   const exclusions = formData.get("exclusions") as string | null;
   const estimateHours = parseFloat(formData.get("estimateHours") as string);
-  const requestsPerMonth = parseInt(formData.get("requestsPerMonth") as string);
+  const requestsPerMonth = parseFloat(formData.get("requestsPerMonth") as string);
+  const notes = formData.get("notes") as string | null;
 
   if (!id || !packageId || !taskName || isNaN(estimateHours) || isNaN(requestsPerMonth)) {
     console.warn("DEBUG - updateSRORule validation failed:", { id, packageId, taskName, estimateHours, requestsPerMonth });
-    return { error: "Vui lòng điền đầy đủ thông tin hợp lệ" };
+    return { error: "Please fill in all required fields validly" };
   }
 
   try {
@@ -228,7 +231,7 @@ export async function updateSRORule(formData: FormData) {
       include: { sroRules: true }
     });
 
-    if (!pkg) return { error: "Gói không tồn tại" };
+    if (!pkg) return { error: "Package does not exist" };
 
     await prisma.sRORule.update({
       where: { id },
@@ -238,6 +241,7 @@ export async function updateSRORule(formData: FormData) {
         exclusions,
         estimateHours,
         requestsPerMonth,
+        notes,
       },
     });
 
@@ -259,14 +263,14 @@ export async function updateSRORule(formData: FormData) {
     return { success: true };
   } catch (error: any) {
     console.error("DEBUG - Error in updateSRORule:", error);
-    return { error: `Lỗi hệ thống: ${error.message || "Không xác định"}` };
+    return { error: `System error: ${error.message || "Unknown"}` };
   }
 }
 
 export async function deleteSRORule(id: string, packageId: string) {
   const session = await auth();
   if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
-    return { error: "Bạn không có quyền thực hiện hành động này" };
+    return { error: "You do not have permission to perform this action" };
   }
   
   try {
@@ -275,7 +279,7 @@ export async function deleteSRORule(id: string, packageId: string) {
       include: { package: true }
     });
 
-    if (!rule) return { error: "Quy tắc không tồn tại" };
+    if (!rule) return { error: "Rule does not exist" };
 
     await prisma.sRORule.delete({
       where: { id },
@@ -299,7 +303,7 @@ export async function deleteSRORule(id: string, packageId: string) {
     return { success: true };
   } catch (error: any) {
     console.error("DEBUG - Error in deleteSRORule:", error);
-    return { error: `Lỗi hệ thống: ${error.message || "Không xác định"}` };
+    return { error: `System error: ${error.message || "Unknown"}` };
   }
 }
 
@@ -318,7 +322,7 @@ export async function getPackageUsage(packageId: string) {
       select: { monthlyQuota: true }
     });
 
-    if (!pkg) return { error: "Gói không tồn tại" };
+    if (!pkg) return { error: "Package does not exist" };
 
     const requests = await prisma.serviceRequest.findMany({
       where: {
@@ -357,6 +361,6 @@ export async function getPackageUsage(packageId: string) {
     };
   } catch (error: any) {
     console.error("DEBUG - Error in getPackageUsage:", error);
-    return { error: "Không thể tính toán mức độ sử dụng Quota" };
+    return { error: "Could not calculate Quota usage" };
   }
 }

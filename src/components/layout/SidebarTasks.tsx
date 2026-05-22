@@ -25,13 +25,13 @@ export function SidebarTasks({ isCollapsed, onItemClick }: { isCollapsed: boolea
   }, []);
 
   if (isCollapsed) return null;
-  if (loading) return <div className="px-6 py-2 text-[10px] text-slate-400 animate-pulse uppercase font-black tracking-widest">Đang tải...</div>;
-  if (tasks.length === 0) return <div className="px-6 py-4 text-[10px] text-slate-400 italic font-medium">Không có công việc nào</div>;
+  if (loading) return <div className="px-6 py-2 text-[10px] text-slate-400 animate-pulse uppercase font-black tracking-widest">Loading...</div>;
+  if (tasks.length === 0) return <div className="px-6 py-4 text-[10px] text-slate-400 italic font-medium">No tasks assigned</div>;
 
   return (
     <div className="px-3 space-y-1">
       {tasks.map(task => {
-        const isUrgent = task.priority === "URGENT" || task.priority === "HIGH";
+        const isUrgent = task.priority === "P1" || task.priority === "P2" || task.priority === "URGENT" || task.priority === "HIGH";
         const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== "DONE";
 
         return (
@@ -44,7 +44,7 @@ export function SidebarTasks({ isCollapsed, onItemClick }: { isCollapsed: boolea
             <div className="flex items-start gap-2">
               <div className={cn(
                 "mt-0.5 shrink-0",
-                task.status === "DONE" ? "text-emerald-500" : (task.status === "IN_PROGRESS" ? "text-blue-500" : "text-slate-300")
+                task.status === "DONE" ? "text-emerald-500" : (task.status === "IN_PROGRESS" ? "text-blue-500" : (task.status === "PAUSED" ? "text-amber-500" : "text-slate-300"))
               )}>
                 {task.status === "DONE" ? <CheckCircle2 className="w-3.5 h-3.5" /> : (task.status === "IN_PROGRESS" ? <Circle className="w-3.5 h-3.5 fill-blue-500/20" /> : <Circle className="w-3.5 h-3.5" />)}
               </div>
@@ -57,9 +57,11 @@ export function SidebarTasks({ isCollapsed, onItemClick }: { isCollapsed: boolea
                     "text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0",
                     task.status === "TODO" ? "bg-slate-100 text-slate-400" : 
                     task.status === "IN_PROGRESS" ? "bg-blue-50 text-blue-500" : 
-                    "bg-emerald-50 text-emerald-500"
+                    task.status === "DONE" ? "bg-emerald-50 text-emerald-500" :
+                    task.status === "PAUSED" ? "bg-amber-50 text-amber-500" :
+                    "bg-zinc-100 text-zinc-400"
                   )}>
-                    {task.status === "TODO" ? "Cần làm" : (task.status === "IN_PROGRESS" ? "Đang xử lý" : "Xong")}
+                    {task.status === "TODO" ? "Received" : (task.status === "IN_PROGRESS" ? "In Progress" : (task.status === "DONE" ? "Completed" : (task.status === "PAUSED" ? "On Hold" : "Closed")))}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
