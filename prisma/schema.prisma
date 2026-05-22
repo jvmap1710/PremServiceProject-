@@ -81,9 +81,10 @@ model SRORule {
   
   taskName        String         // Tên nghiệp vụ (e.g., Update Content, Fix Bug)
   estimateHours   Float          // Số giờ quy đổi (e.g., 0.5, 1.0)
-  requestsPerMonth Int           @default(1) // Số lần yêu cầu định mức mỗi tháng
+  requestsPerMonth Float         @default(1.0) // Số lần yêu cầu định mức mỗi tháng (Float hỗ trợ số lẻ 0.33 cho 1/quý)
   scope           String?        // Phạm vi
   exclusions      String?        // Ngoại trừ
+  notes           String?        // Ghi chú bán hàng linh hoạt (VD: 1 per quarter)
   
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -111,9 +112,13 @@ model ServiceRequest {
   description    String         // Mô tả kỹ thuật chi tiết (Technical)
   status         String    @default("TODO") // TODO, IN_PROGRESS, DONE
   type           String    @default("TASK") // TASK, BUG, FEATURE, URGENT
-  priority       String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  priority       String    @default("P4") // P1, P2, P3, P4
+  taskPriority   String?   @default("MEDIUM") // HIGH, MEDIUM, LOW
+  urgency        String?   // IMMEDIATE, URGENT, MODERATE, STANDARD
+  impact         String?   // WIDESPREAD, LARGE, LIMITED, LOCALISED
   deadline       DateTime?
   assigneeId     String?   // User ID or name
+  assigneeIds    String?   // Multi-select assignee user IDs, comma separated
   assignee       User?     @relation("Assignee", fields: [assigneeId], references: [id], onUpdate: NoAction)
   
   createdById    String?
