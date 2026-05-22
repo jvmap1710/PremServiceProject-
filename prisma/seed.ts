@@ -185,8 +185,8 @@ async function main() {
         status: status,
         type: ticketType,
         priority: i % 4 === 0 ? "P1" : i % 4 === 1 ? "P2" : i % 4 === 2 ? "P3" : "P4",
-        urgency: urgency,
-        impact: impact,
+        urgency: urgency as any,
+        impact: impact as any,
         clientId: client.id,
         packageId: pkg.id,
         createdById: adminJV.id,
@@ -194,7 +194,7 @@ async function main() {
         raiseDate: ticketDate,
         deadline: addDays(ticketDate, 5),
         items: { create: { sroRuleId: rule.id, quantity: 1 } }
-      }
+      } as any
     });
 
     // Create WorkLog for DONE tickets
