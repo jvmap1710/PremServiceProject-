@@ -5,8 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "9999:9999"
+    # Ports are removed from here. Caddy will handle the public port 9999
+    # and proxy internally to web:9999 over the Docker network.
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-password123}@db:5432/${POSTGRES_DB:-premservice}?schema=public
@@ -38,6 +38,17 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "9999:9999"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./certs:/etc/caddy/certs
+    depends_on:
+      - web
 
 volumes:
   postgres_data:

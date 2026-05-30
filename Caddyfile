@@ -1,0 +1,4 @@
+:9999 {
+    tls /etc/caddy/certs/cert.pem /etc/caddy/certs/key.pem
+    reverse_proxy web:9999
+}
