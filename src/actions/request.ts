@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { createNotification } from "./notification";
 import { NotificationService } from "@/lib/notifications";
 import { requestSchema } from "@/lib/validations";
+import { generateTicketCode } from "@/lib/generate-code";
 
 
 /**
@@ -83,21 +84,7 @@ export async function createServiceRequest(formData: FormData) {
 
     if (!client) return { error: "Client does not exist" };
 
-    const lastRequest = await prisma.serviceRequest.findFirst({
-      where: { clientId },
-      orderBy: { code: 'desc' },
-      select: { code: true }
-    });
-
-    let nextNumber = 1;
-    if (lastRequest && lastRequest.code) {
-      const parts = lastRequest.code.split('-');
-      const lastNum = parseInt(parts[parts.length - 1]);
-      if (!isNaN(lastNum)) {
-        nextNumber = lastNum + 1;
-      }
-    }
-    const requestCode = `${client.code}-${nextNumber.toString().padStart(3, '0')}`;
+    const requestCode = await generateTicketCode(clientId, client.code, raiseDateStr ? new Date(raiseDateStr) : new Date());
 
     const session = await auth();
     const createdById = session?.user?.id || null;
@@ -127,6 +114,29 @@ export async function createServiceRequest(formData: FormData) {
             quantity: item.quantity
           }))
         }
+      }
+    });
+
+    // Auto-create exactly 1 SLA Line matching the ticket type and priority
+    const matchingTarget = await prisma.slaTarget.findFirst({
+      where: { 
+        packageId, 
+        ticketType: type || "INCIDENT", 
+        priority: priority || "P4" 
+      }
+    });
+
+    await prisma.slaLine.create({
+      data: {
+        requestId: request.id,
+        title: `SLA: ${type || "INCIDENT"} - ${priority || "P4"}`,
+        priority: priority || "P4",
+        ticketType: type || "INCIDENT",
+        ticketRequestDateTime: raiseDateStr ? new Date(raiseDateStr) : new Date(),
+        ackSlaTarget: matchingTarget?.ackTargetHours ?? null,
+        responseSlaTarget: matchingTarget?.responseTargetHours ?? null,
+        updateFreqSlaTarget: matchingTarget?.updateFreqTargetHours ?? null,
+        completionSlaTarget: matchingTarget?.completionTargetHours ?? null,
       }
     });
 
@@ -189,6 +199,10 @@ export async function updateServiceRequest(id: string, formData: FormData) {
   const assigneeIds = formData.get("assigneeIds") as string;
   const packageId = formData.get("packageId") as string;
   const raiseDateStr = formData.get("raiseDate") as string;
+  const escalation = formData.get("escalation") as string;
+  const emailSubject = formData.get("emailSubject") as string;
+  const agreedFinalSolutionStr = formData.get("agreedFinalSolution") as string;
+  const estimatedTimelineStr = formData.get("estimatedTimeline") as string;
   const sroItemsJson = formData.get("sroItems");
 
   // Validation: Only if they are provided, they must not be empty
@@ -206,7 +220,7 @@ export async function updateServiceRequest(id: string, formData: FormData) {
     await prisma.$transaction(async (tx) => {
       const currentRequest = await tx.serviceRequest.findUnique({
         where: { id },
-        select: { createdById: true, assigneeId: true, assigneeIds: true, clientId: true, type: true, workLogs: { take: 1 } }
+        select: { createdById: true, assigneeId: true, assigneeIds: true, clientId: true, type: true, workLogs: { select: { user: { select: { role: true } } } } }
       });
 
       if (!currentRequest) return { error: "Request does not exist" };
@@ -222,14 +236,17 @@ export async function updateServiceRequest(id: string, formData: FormData) {
         throw new Error("You do not have permission to edit this request");
       }
 
-      // 1. Check if moving to DONE
-      if (status === "DONE") {
+      // 1. Check if moving to DONE, COMPLETED, or CLOSED
+      if (status === "DONE" || status === "COMPLETED" || status === "CLOSED") {
         if (!isAssignee && !isAdmin && !isTAS) {
           throw new Error("You do not have permission to mark this request as completed");
         }
 
-        if (currentRequest.workLogs.length === 0) {
-          throw new Error("You must log at least one work entry before completing the request");
+        const hasEngineerLog = currentRequest.workLogs.some(log => log.user?.role !== "TAS" && log.user?.role !== "ADMIN");
+        const hasTASLog = currentRequest.workLogs.some(log => log.user?.role === "TAS" || log.user?.role === "ADMIN");
+
+        if (!hasEngineerLog || !hasTASLog) {
+          throw new Error("Cannot close request: Both Engineer and TAS must log their time first.");
         }
       }
 
@@ -252,6 +269,10 @@ export async function updateServiceRequest(id: string, formData: FormData) {
           package: { select: { name: true } }
         }
       });
+
+      if (oldRequest?.status === "CLOSED" && !isAdmin) {
+        throw new Error("This request is CLOSED and can only be modified by an Admin.");
+      }
 
       const updateData: any = {};
       if (formData.has("title")) updateData.title = title;
@@ -286,6 +307,10 @@ export async function updateServiceRequest(id: string, formData: FormData) {
       }
 
       if (formData.has("raiseDate")) updateData.raiseDate = raiseDateStr ? new Date(raiseDateStr) : undefined;
+      if (formData.has("escalation")) updateData.escalation = escalation || undefined;
+      if (formData.has("emailSubject")) updateData.emailSubject = emailSubject || null;
+      if (formData.has("agreedFinalSolution")) updateData.agreedFinalSolution = agreedFinalSolutionStr ? new Date(agreedFinalSolutionStr) : null;
+      if (formData.has("estimatedTimeline")) updateData.estimatedTimeline = estimatedTimelineStr ? new Date(estimatedTimelineStr) : null;
 
       // Reset urgency/impact if ticket type becomes something other than INCIDENT or PROBLEM
       const finalType = formData.has("type") ? type : currentRequest.type;
@@ -790,6 +815,56 @@ export async function deleteServiceRequest(id: string) {
     revalidatePath("/requests");
     revalidatePath("/");
     return { success: true };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+export async function getAllRequestsForExport(filters: { search?: string, status?: string, mine?: boolean }) {
+  try {
+    const session = await auth();
+    if (!session) return { error: "Unauthorized" };
+
+    const { search, status, mine } = filters;
+    let whereClause: any = {};
+
+    if (search) {
+      whereClause.OR = [
+        { code: { contains: search } },
+        { title: { contains: search } },
+        { client: { name: { contains: search } } },
+        { client: { code: { contains: search } } }
+      ];
+    }
+
+    if (status && status !== "ALL") {
+      whereClause.status = status;
+    }
+
+    if (mine) {
+      whereClause.OR = [
+        ...(whereClause.OR || []),
+        { assigneeId: session.user.id },
+        { assigneeIds: { contains: session.user.id } }
+      ];
+    }
+
+    const requests = await prisma.serviceRequest.findMany({
+      where: whereClause,
+      include: {
+        client: true,
+        package: true,
+        assignee: true,
+        creator: true,
+        items: { include: { sroRule: true } },
+        slaLines: true,
+        workLogs: true,
+        slaUpdateEntries: true,
+      },
+      orderBy: { raiseDate: "desc" }
+    });
+
+    return { success: true, requests };
   } catch (error: any) {
     return { error: error.message };
   }

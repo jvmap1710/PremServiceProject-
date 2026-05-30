@@ -1,11 +1,15 @@
 "use client";
 
-import { Calendar, LayoutGrid, List, UserCheck, Search, AlertCircle, Clock, ChevronRight, User, Loader2, ShieldAlert, AlertTriangle, Tag } from "lucide-react";
+import { Calendar, LayoutGrid, List, UserCheck, Search, AlertCircle, Clock, ChevronRight, User, Loader2, ShieldAlert, AlertTriangle, Tag, Download } from "lucide-react";
 import Link from "next/link";
 import { RequestForm } from "./RequestForm";
+import { ImportTicketsModal } from "./ImportTicketsModal";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
+import { getAllRequestsForExport } from "@/actions/request";
+import { TicketDataGridModal } from "./TicketDataGridModal";
+import toast from "react-hot-toast";
 
 const PRIORITY_STYLES: Record<string, { icon: any, label: string, color: string, bg: string, border: string, accent: string }> = {
   P1:      { icon: ShieldAlert,    label: "P1",      color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-900/20", border: "border-red-200 dark:border-red-900/30", accent: "#e11d48" },
@@ -38,8 +42,8 @@ const SLA_PRIORITY_MAP: Record<string, { label: string, color: string, bg: strin
 const TICKET_TYPE_STYLES: Record<string, { label: string, color: string, bg: string, border: string }> = {
   INCIDENT: { label: "Incident", color: "text-rose-700 dark:text-rose-300", bg: "bg-rose-50/50 dark:bg-rose-950/20", border: "border-rose-100 dark:border-rose-800/30" },
   PROBLEM: { label: "Problem", color: "text-amber-700 dark:text-amber-300", bg: "bg-amber-50/50 dark:bg-amber-950/20", border: "border-amber-100 dark:border-amber-800/30" },
-  SRO: { label: "SRO", color: "text-indigo-700 dark:text-indigo-300", bg: "bg-indigo-50/50 dark:bg-indigo-950/20", border: "border-indigo-100 dark:border-indigo-800/30" },
-  NSRO: { label: "NSRO", color: "text-violet-700 dark:text-violet-300", bg: "bg-violet-50/50 dark:bg-violet-950/20", border: "border-violet-100 dark:border-violet-800/30" },
+  SRO: { label: "SR", color: "text-indigo-700 dark:text-indigo-300", bg: "bg-indigo-50/50 dark:bg-indigo-950/20", border: "border-indigo-100 dark:border-indigo-800/30" },
+  NSRO: { label: "NSR", color: "text-violet-700 dark:text-violet-300", bg: "bg-violet-50/50 dark:bg-violet-950/20", border: "border-violet-100 dark:border-violet-800/30" },
   HEALTH_CHECK: { label: "Health Check", color: "text-teal-700 dark:text-teal-300", bg: "bg-teal-50/50 dark:bg-teal-950/20", border: "border-teal-100 dark:border-teal-800/30" },
   OTHERS: { label: "Others", color: "text-slate-600 dark:text-slate-400", bg: "bg-slate-100 dark:bg-slate-800/50", border: "border-slate-200 dark:border-slate-700" },
 };
@@ -64,6 +68,8 @@ export function RequestList({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, setIsPending] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isDataGridOpen, setIsDataGridOpen] = useState(false);
   
   // Local state only for input values to keep them responsive
   const [searchInput, setSearchInput] = useState(searchParams.get("search") || "");
@@ -120,6 +126,158 @@ export function RequestList({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExportExcel = async () => {
+    let toastId = "export-toast";
+    try {
+      setIsExporting(true);
+      toastId = toast.loading("Generating Excel file...");
+      
+      const filters = {
+        search: searchParams.get("search") || undefined,
+        status: searchParams.get("status") || undefined,
+        mine: searchParams.get("mine") === "true" ? true : undefined
+      };
+      
+      const res = await getAllRequestsForExport(filters);
+      if (!res.success || !res.requests) {
+        toast.error(res.error || "Failed to fetch data for export", { id: toastId });
+        setIsExporting(false);
+        return;
+      }
+      
+      const ExcelJS = (await import("exceljs")).default || await import("exceljs");
+      const { saveAs } = await import("file-saver");
+      
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("SLA Compliance");
+      
+      const headers = [
+        "Ticket ID", "Customer Code", "Ticket No.", "Ticket Code", "Ticket Detail", "Ticket Title",
+        "Ticket Request Datetime", "Month", "Year", "Ticket Item No.", "Ticket Item ID",
+        "Request Classification", "Priority Level", "Concat SR Classification", "Request Type",
+        "Concat Customer Code + Request Type", "Average estimated time required per request (hour)",
+        "No. Requests in scope per month", "Escalation Type", "Acknowledgement SLA Target",
+        "Actual Acknowledgement Datetime", "Actual Acknowledgement Time (hours)",
+        "Actual Acknowledgement Performance", "Response SLA Target", "Actual Response Time",
+        "Actual Response Time (hours)", "Response Time Performance", "Update Frequency SLA Target",
+        "Customer Response Time (to compare with Actual Update Frequency SLA)",
+        "Actual Update Frequency Time", "Actual Update Frequency (hours)", "Update Frequency NOTE",
+        "Update Frequency Performance", "Actual TAS Man-hours", "Estimated Man Hours",
+        "Agreed Final Solution Datetime", "Estimated Timeline", "PIC SE", "Actual SE Start Datetime",
+        "Actual SE Man-hours", "Actual M-Files Man-hours", "Actual President Solution Man-hours",
+        "Service Restoration/ Request Completion SLA Target",
+        "Actual Service Restoration/ Request Completion Datetime",
+        "Actual Service Restoration/ Request Completion (hours)",
+        "Service Restoration/ Request Completion Performance", "Actual Total Man-hours", "Status"
+      ];
+      worksheet.addRow(headers);
+      
+      const formatDT = (dt: any) => dt ? new Date(dt).toLocaleString("en-GB") : "";
+      
+      let itemNumber = 1;
+      res.requests.forEach((req: any) => {
+        let totalWorkHours = 0;
+        let tasWorkHours = 0;
+        if (req.workLogs) {
+          req.workLogs.forEach((log: any) => {
+            totalWorkHours += (log.hours || 0);
+            if (log.userId === req.assigneeId) {
+              tasWorkHours += (log.hours || 0);
+            }
+          });
+        }
+        
+        let totalEstHours = 0;
+        if (req.items) {
+           req.items.forEach((item: any) => {
+              totalEstHours += (item.quantity * (item.sroRule?.estimateHours || 0));
+           });
+        }
+        
+        const reqDT = req.raiseDate ? new Date(req.raiseDate) : null;
+        const month = reqDT ? reqDT.getMonth() + 1 : "";
+        const year = reqDT ? reqDT.getFullYear() : "";
+
+        const hasLines = req.slaLines && req.slaLines.length > 0;
+        const hasUpdates = req.slaUpdateEntries && req.slaUpdateEntries.length > 0;
+
+        if (!hasLines && !hasUpdates) {
+           worksheet.addRow([
+             req.id, req.client?.code || "", itemNumber++, req.code || "", req.description || "", req.title || "",
+             formatDT(req.raiseDate), month, year, itemNumber - 1, "", req.type || "", req.priority || "",
+             `${req.client?.code || ""}_${req.type || ""}`, "", "", "", req.package?.monthlyQuota || "", req.escalation || "",
+             "", "", "", "", "", "", "", "", "", "", "", "", "", "", tasWorkHours || "", totalEstHours || "",
+             "", "", req.assignee?.name || "", "", "", "", "", "", "", "", "", totalWorkHours || "", req.status || ""
+           ]);
+        } else {
+           // We flatten by taking the max of SLA lines and Update entries.
+           // Usually 1 SLA line, and N update entries.
+           const rowsToGenerate = hasUpdates ? req.slaUpdateEntries : (hasLines ? req.slaLines : [{}]);
+           
+           rowsToGenerate.forEach((entry: any, index: number) => {
+              // If it's an update entry, grab the first SLA line for the primary data.
+              // If it's an SLA line, grab the first update entry (if it somehow exists).
+              const line = hasLines ? (req.slaLines[index] || req.slaLines[0]) : {};
+              const update = hasUpdates ? (req.slaUpdateEntries[index] || req.slaUpdateEntries[0]) : {};
+
+              const rowData = [
+                req.id, req.client?.code || "", index === 0 ? itemNumber++ : itemNumber, req.code || "", req.description || "", req.title || "",
+                formatDT(req.raiseDate), month, year, itemNumber - 1, line.id || "", req.type || "", line.priority || "",
+                `${req.client?.code || ""}_${req.type || ""}`, line.ticketType || "",
+                `${req.client?.code || ""}_${line.ticketType || ""}`, totalEstHours || "", req.package?.monthlyQuota || "", req.escalation || "",
+                line.ackSlaTarget !== null && line.ackSlaTarget !== undefined ? line.ackSlaTarget : "", formatDT(line.ackDateTime),
+                line.actualAckTime !== null && line.actualAckTime !== undefined ? line.actualAckTime : "",
+                line.actualAckTime !== null && line.actualAckTime !== undefined && line.ackSlaTarget !== null && line.ackSlaTarget !== undefined ? (line.actualAckTime <= line.ackSlaTarget ? "Met" : "Exceeded") : "",
+                line.responseSlaTarget !== null && line.responseSlaTarget !== undefined ? line.responseSlaTarget : "",
+                line.actualResponseTime !== null && line.actualResponseTime !== undefined ? line.actualResponseTime : "",
+                line.actualResponseTime !== null && line.actualResponseTime !== undefined ? line.actualResponseTime : "",
+                line.actualResponseTime !== null && line.actualResponseTime !== undefined && line.responseSlaTarget !== null && line.responseSlaTarget !== undefined ? (line.actualResponseTime <= line.responseSlaTarget ? "Met" : "Exceeded") : "",
+                line.updateFreqSlaTarget !== null && line.updateFreqSlaTarget !== undefined ? line.updateFreqSlaTarget : "",
+                formatDT(update.customerResponseDateTime),
+                update.actualUpdateFrequency !== null && update.actualUpdateFrequency !== undefined ? update.actualUpdateFrequency : "",
+                update.actualUpdateFrequency !== null && update.actualUpdateFrequency !== undefined ? update.actualUpdateFrequency : "",
+                update.note || "",
+                update.actualUpdateFrequency !== null && update.actualUpdateFrequency !== undefined && line.updateFreqSlaTarget !== null && line.updateFreqSlaTarget !== undefined ? (update.actualUpdateFrequency <= line.updateFreqSlaTarget ? "Met" : "Exceeded") : "",
+                tasWorkHours || "", totalEstHours || "",
+                "", "", req.assignee?.name || "", "", "", "", "",
+                line.completionSlaTarget !== null && line.completionSlaTarget !== undefined ? line.completionSlaTarget : "",
+                formatDT(line.completionDateTime),
+                line.actualCompletionTime !== null && line.actualCompletionTime !== undefined ? line.actualCompletionTime : "",
+                line.actualCompletionTime !== null && line.actualCompletionTime !== undefined && line.completionSlaTarget !== null && line.completionSlaTarget !== undefined ? (line.actualCompletionTime <= line.completionSlaTarget ? "Met" : "Exceeded") : "",
+                totalWorkHours || "", req.status || ""
+              ];
+              worksheet.addRow(rowData);
+           });
+        }
+      });
+      
+      // Auto-fit
+      worksheet.columns.forEach((column) => {
+        let maxLength = 0;
+        column.eachCell!({ includeEmpty: true }, (cell) => {
+          let columnLength = cell.value ? cell.value.toString().length : 10;
+          if (columnLength > maxLength) maxLength = columnLength;
+        });
+        column.width = maxLength < 10 ? 10 : maxLength > 40 ? 40 : maxLength + 2;
+      });
+
+      // Header styling
+      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: "FF4F46E5" } };
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      saveAs(blob, `Master_SLA_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success("Excel exported successfully!", { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to export Excel.", { id: toastId });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -153,6 +311,29 @@ export function RequestList({
               Kanban
             </Link>
           </div>
+          <button 
+            onClick={() => setIsDataGridOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-colors border border-blue-200 dark:border-blue-800"
+            title="Data Grid Preview"
+          >
+            📊 Data Grid
+          </button>
+          <button 
+            onClick={handleExportExcel}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors border border-indigo-200 dark:border-indigo-800 disabled:opacity-50"
+            title="Export Tickets to Excel"
+          >
+            {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            Export
+          </button>
+          <button 
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors border border-emerald-200 dark:border-emerald-800"
+            title="Import Tickets from Excel"
+          >
+            Import
+          </button>
           <RequestForm clients={clients} users={users} />
         </div>
       </div>
@@ -355,6 +536,20 @@ export function RequestList({
         </div>
       )}
     </div>
+
+      <ImportTicketsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
+
+      {isDataGridOpen && (
+        <TicketDataGridModal
+          isOpen={isDataGridOpen}
+          onClose={() => setIsDataGridOpen(false)}
+          filters={{
+            search: searchParams.get("search") || undefined,
+            status: searchParams.get("status") || undefined,
+            mine: searchParams.get("mine") === "true" ? true : undefined
+          }}
+        />
+      )}
 
       {/* Pagination Controls */}
       {pagination.totalPages > 1 && (

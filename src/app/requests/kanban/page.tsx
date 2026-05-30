@@ -27,6 +27,9 @@ export default async function KanbanPage() {
         },
         comments: {
           orderBy: { createdAt: 'desc' }
+        },
+        slaLines: {
+          orderBy: { createdAt: 'asc' }
         }
       },
       orderBy: {
@@ -51,6 +54,9 @@ export default async function KanbanPage() {
     }),
     import("@/auth").then(m => m.auth())
   ]);
+
+  console.log("KanbanPage requests count:", requests.length);
+  console.log("KanbanPage requests slaLines count:", requests.map(r => ({ code: r.code, slaLines: r.slaLines?.length })));
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">

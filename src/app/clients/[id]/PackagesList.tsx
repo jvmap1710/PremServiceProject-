@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, Clock, ShieldCheck, ChevronDown, ChevronUp, SlidersHorizontal, Package, ArrowUpDown } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Calendar, Clock, ShieldCheck, ChevronDown, ChevronUp, SlidersHorizontal, Package, ArrowUpDown, Plus, Trash2, Save, Target } from "lucide-react";
 import { PackageForm } from "./PackageForm";
 import { RuleForm } from "./RuleForm";
 import { DeleteRuleButton } from "./DeleteRuleButton";
+import { upsertSlaTarget, deleteSlaTarget } from "@/actions/sla-target";
+import { toast } from "react-hot-toast";
 
 interface Rule {
   id: string;
@@ -17,6 +19,16 @@ interface Rule {
   notes?: string | null;
 }
 
+interface SlaTarget {
+  id: string;
+  priority: string;
+  ticketType: string;
+  ackTargetHours: number;
+  responseTargetHours: number;
+  updateFreqTargetHours: number | null;
+  completionTargetHours: number | null;
+}
+
 interface PremiumPackage {
   id: string;
   name: string;
@@ -27,6 +39,7 @@ interface PremiumPackage {
   monthlyQuota: number | null;
   clientId: string;
   sroRules: Rule[];
+  slaTargets: SlaTarget[];
 }
 
 export function PackagesList({
@@ -175,9 +188,13 @@ export function PackagesList({
                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-900/30 shrink-0">
                           Active
                         </span>
-                      ) : (
+                      ) : new Date(pkg.validTo) < new Date() ? (
                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shrink-0">
                           Expired
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-900/30 shrink-0">
+                          Deactivated
                         </span>
                       )}
                     </div>
@@ -291,12 +308,237 @@ export function PackagesList({
                         ))}
                       </ul>
                     )}
+
+                    {/* Divider */}
+                    <div className="h-[1px] bg-slate-100 dark:bg-slate-800/80 my-8" />
+
+                    {/* SLA Targets Config */}
+                    <SlaTargetsManager packageId={pkg.id} initialTargets={pkg.slaTargets || []} />
                   </div>
                 )}
               </div>
             );
           })
         )}
+      </div>
+    </div>
+  );
+}
+
+function SlaTargetsManager({ 
+  packageId, 
+  initialTargets 
+}: { 
+  packageId: string; 
+  initialTargets: SlaTarget[] 
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [newTarget, setNewTarget] = useState({
+    priority: "P1",
+    ticketType: "INCIDENT",
+    ackTargetHours: "0.5",
+    responseTargetHours: "4",
+    updateFreqTargetHours: "2",
+    completionTargetHours: "8"
+  });
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTarget.ackTargetHours || !newTarget.responseTargetHours) {
+      toast.error("Please fill in Ack and Response targets");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await upsertSlaTarget({
+        packageId,
+        priority: newTarget.priority,
+        ticketType: newTarget.ticketType,
+        ackTargetHours: parseFloat(newTarget.ackTargetHours),
+        responseTargetHours: parseFloat(newTarget.responseTargetHours),
+        updateFreqTargetHours: newTarget.updateFreqTargetHours ? parseFloat(newTarget.updateFreqTargetHours) : null,
+        completionTargetHours: newTarget.completionTargetHours ? parseFloat(newTarget.completionTargetHours) : null
+      });
+
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("SLA Target saved successfully");
+      }
+    });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this SLA Target?")) return;
+
+    startTransition(async () => {
+      const res = await deleteSlaTarget(id);
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("SLA Target deleted successfully");
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-6 mt-8">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">
+            SLA Targets Configuration
+          </h4>
+        </div>
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          {initialTargets.length} Targets Defined
+        </span>
+      </div>
+
+      {initialTargets.length === 0 ? (
+        <div className="p-6 rounded-[20px] border border-dashed border-slate-200 dark:border-slate-800 text-center bg-white dark:bg-slate-950">
+          <p className="text-xs text-slate-400 dark:text-slate-500 italic">No SLA Targets configured. Set them using the form below.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto bg-white dark:bg-slate-950 rounded-[20px] border border-slate-200 dark:border-slate-800">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800">
+                <th className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-4 py-3">Priority</th>
+                <th className="text-[9px] font-black text-slate-400 uppercase tracking-widest py-3">Ticket Type</th>
+                <th className="text-[9px] font-black text-slate-400 uppercase tracking-widest py-3">Ack Target</th>
+                <th className="text-[9px] font-black text-slate-400 uppercase tracking-widest py-3">Response Target</th>
+                <th className="text-[9px] font-black text-slate-400 uppercase tracking-widest py-3">Update Freq Target</th>
+                <th className="text-[9px] font-black text-slate-400 uppercase tracking-widest py-3">Completion Target</th>
+                <th className="text-[9px] font-black text-slate-400 uppercase tracking-widest pr-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+              {initialTargets.map((t) => (
+                <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                  <td className="py-2.5 pl-4"><span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black">{t.priority}</span></td>
+                  <td className="py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350">{t.ticketType}</td>
+                  <td className="py-2.5 text-xs font-black text-slate-900 dark:text-slate-200">{t.ackTargetHours}h</td>
+                  <td className="py-2.5 text-xs font-black text-slate-900 dark:text-slate-200">{t.responseTargetHours}h</td>
+                  <td className="py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    {t.updateFreqTargetHours !== null ? `${t.updateFreqTargetHours}h` : <span className="text-slate-300 dark:text-slate-700">—</span>}
+                  </td>
+                  <td className="py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    {t.completionTargetHours !== null ? `${t.completionTargetHours}h` : <span className="text-slate-300 dark:text-slate-700">—</span>}
+                  </td>
+                  <td className="py-2.5 text-right pr-4">
+                    <button
+                      onClick={() => handleDelete(t.id)}
+                      disabled={isPending}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-all"
+                      title="Delete target"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Add / Upsert Form */}
+      <div className="p-5 bg-slate-50 dark:bg-slate-950 rounded-[24px] border border-slate-200 dark:border-slate-800 space-y-4">
+        <div className="flex items-center gap-2">
+          <Plus className="w-4 h-4 text-indigo-600" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Add / Update SLA Target</span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <div className="space-y-1">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Priority</label>
+            <select
+              value={newTarget.priority}
+              onChange={(e) => setNewTarget({ ...newTarget, priority: e.target.value })}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="P1">P1</option>
+              <option value="P2">P2</option>
+              <option value="P3">P3</option>
+              <option value="P4">P4</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ticket Type</label>
+            <select
+              value={newTarget.ticketType}
+              onChange={(e) => setNewTarget({ ...newTarget, ticketType: e.target.value })}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="INCIDENT">INCIDENT</option>
+              <option value="PROBLEM">PROBLEM</option>
+              <option value="SRO">SRO</option>
+              <option value="NSRO">NSRO</option>
+              <option value="OTHERS">OTHERS</option>
+              <option value="HEALTH_CHECK">HEALTH_CHECK</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ack Target (hrs)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={newTarget.ackTargetHours}
+              onChange={(e) => setNewTarget({ ...newTarget, ackTargetHours: e.target.value })}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+              required
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Resp Target (hrs)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={newTarget.responseTargetHours}
+              onChange={(e) => setNewTarget({ ...newTarget, responseTargetHours: e.target.value })}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+              required
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Update Freq (hrs)</label>
+            <input
+              type="number"
+              step="0.1"
+              placeholder="Optional"
+              value={newTarget.updateFreqTargetHours}
+              onChange={(e) => setNewTarget({ ...newTarget, updateFreqTargetHours: e.target.value })}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Completion (hrs)</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Optional"
+                value={newTarget.completionTargetHours}
+                onChange={(e) => setNewTarget({ ...newTarget, completionTargetHours: e.target.value })}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 min-w-0"
+              />
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={isPending}
+                className="px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all disabled:opacity-50 shrink-0 flex items-center justify-center"
+              >
+                {isPending ? "..." : <Plus className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

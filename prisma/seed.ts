@@ -7,6 +7,9 @@ async function main() {
   console.log("--- Starting Cleanup & Mock Data Seeding ---");
 
   // 0. Cleanup
+  await prisma.slaUpdateEntry.deleteMany({});
+  await prisma.slaTarget.deleteMany({});
+  await prisma.holiday.deleteMany({});
   await prisma.workLog.deleteMany({});
   await prisma.comment.deleteMany({});
   await prisma.attachment.deleteMany({});
@@ -19,7 +22,7 @@ async function main() {
   await prisma.client.deleteMany({});
   await prisma.globalSettings.deleteMany({});
   await prisma.kanbanColumn.deleteMany({});
-  console.log("✓ Successfully cleaned up old data (including KanbanColumn).");
+  console.log("✓ Successfully cleaned up old data (including SLA models and KanbanColumn).");
 
   const password = await bcrypt.hash("MotSys123", 10);
   const adminPassword = await bcrypt.hash("MotSys123@", 10);
@@ -211,6 +214,35 @@ async function main() {
       });
     }
   }
+
+  // 7. Seed Holidays
+  await prisma.holiday.createMany({
+    data: [
+      { date: new Date(2026, 0, 1), name: "New Year's Day", year: 2026 },
+      { date: new Date(2026, 3, 30), name: "Reunification Day", year: 2026 },
+      { date: new Date(2026, 4, 1), name: "International Labor Day", year: 2026 },
+      { date: new Date(2026, 8, 2), name: "National Day", year: 2026 },
+      { date: new Date(2026, 8, 3), name: "National Day Holiday (Extra)", year: 2026 },
+    ]
+  });
+  console.log("✓ Seeded standard 2026 Vietnam Holidays.");
+
+  // 8. Seed SLA Targets for packages
+  await prisma.slaTarget.createMany({
+    data: [
+      // BSL targets
+      { packageId: bslPackage.id, priority: "P1", ticketType: "INCIDENT", ackTargetHours: 0.5, responseTargetHours: 4.0, updateFreqTargetHours: 2.0 },
+      { packageId: bslPackage.id, priority: "P2", ticketType: "INCIDENT", ackTargetHours: 1.0, responseTargetHours: 8.0, updateFreqTargetHours: 4.0 },
+      { packageId: bslPackage.id, priority: "P3", ticketType: "SRO", ackTargetHours: 4.0, responseTargetHours: 24.0 },
+      { packageId: bslPackage.id, priority: "P4", ticketType: "OTHERS", ackTargetHours: 8.0, responseTargetHours: 48.0 },
+      // SMC 2025 targets
+      { packageId: smcP2025.id, priority: "P1", ticketType: "INCIDENT", ackTargetHours: 0.5, responseTargetHours: 4.0, updateFreqTargetHours: 2.0 },
+      // SMC 2026 targets
+      { packageId: smcP2026.id, priority: "P1", ticketType: "INCIDENT", ackTargetHours: 0.5, responseTargetHours: 3.0, updateFreqTargetHours: 1.5 },
+      { packageId: smcP2026.id, priority: "P2", ticketType: "PROBLEM", ackTargetHours: 1.0, responseTargetHours: 6.0, updateFreqTargetHours: 3.0 },
+    ]
+  });
+  console.log("✓ Seeded SLA Targets for BSL & SMC Premium Packages.");
 
   console.log("✓ Seeded 30 Mock Tickets with WorkLogs.");
   console.log("--- MOCK DATA SEEDING COMPLETE ---");

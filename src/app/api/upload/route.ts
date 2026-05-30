@@ -18,6 +18,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing file or requestId" }, { status: 400 });
     }
 
+    // 1. Check File Size (Max 20MB to prevent DoS)
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "File exceeds maximum size of 20MB" }, { status: 413 });
+    }
+
+    // 2. Reject dangerous file types
+    const dangerousExtensions = ['.exe', '.sh', '.bat', '.php', '.js', '.vbs', '.cmd'];
+    const fileName = file.name.toLowerCase();
+    if (dangerousExtensions.some(ext => fileName.endsWith(ext))) {
+      return NextResponse.json({ error: "File type not allowed" }, { status: 415 });
+    }
+
     let buffer = Buffer.from(await file.arrayBuffer());
     let fileType = file.type;
 

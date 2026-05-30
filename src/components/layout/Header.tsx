@@ -132,6 +132,16 @@ export function Header({ userName, userRole = "TAS" }: HeaderProps) {
             className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all font-medium text-slate-900 dark:text-slate-100"
             onBlur={() => setSearchOpen(false)}
             autoFocus={searchOpen}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const searchVal = e.currentTarget.value;
+                if (searchVal.trim()) {
+                  router.push(`/requests?search=${encodeURIComponent(searchVal.trim())}`);
+                } else {
+                  router.push(`/requests`);
+                }
+              }
+            }}
           />
         </div>
 

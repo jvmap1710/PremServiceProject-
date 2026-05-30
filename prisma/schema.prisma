@@ -70,6 +70,7 @@ model PremiumPackage {
 
   sroRules    SRORule[]
   requests    ServiceRequest[]
+  slaTargets  SlaTarget[]
 
   @@map("PremiumPackages")
 }
@@ -117,9 +118,14 @@ model ServiceRequest {
   urgency        String?   // IMMEDIATE, URGENT, MODERATE, STANDARD
   impact         String?   // WIDESPREAD, LARGE, LIMITED, LOCALISED
   deadline       DateTime?
+  agreedFinalSolution DateTime?
+  estimatedTimeline   DateTime?
   assigneeId     String?   // User ID or name
   assigneeIds    String?   // Multi-select assignee user IDs, comma separated
   assignee       User?     @relation("Assignee", fields: [assigneeId], references: [id], onUpdate: NoAction)
+  
+  escalation     String    @default("Fujifilm business innovation vietnam support personnel")
+  emailSubject   String?
   
   createdById    String?
   creator        User?     @relation("Creator", fields: [createdById], references: [id], onUpdate: NoAction, onDelete: NoAction)
@@ -133,6 +139,8 @@ model ServiceRequest {
   workLogs       WorkLog[]
   attachments    Attachment[]
   auditLogs      AuditLog[]
+  slaUpdateEntries SlaUpdateEntry[]
+  slaLines       SlaLine[]
   
   @@index([clientId])
   @@index([packageId])
@@ -323,7 +331,101 @@ model GlobalSettings {
   revenueMode           String   @default("PACKAGE") // PACKAGE or SRO_HOURS
   revenuePerSroHour     Float    @default(0)
   
+  // === Working Hours Config ===
+  workStartTime         String   @default("08:30")     // HH:mm format
+  workEndTime           String   @default("18:00")     // HH:mm format
+  workDays              String   @default("1,2,3,4,5") // 0=Sun,1=Mon..5=Fri,6=Sat
+
   updatedAt             DateTime @updatedAt
 
   @@map("GlobalSettings")
+}
+
+model Holiday {
+  id          String   @id @default(cuid())
+  date        DateTime @unique // The holiday date
+  name        String            // Holiday name (e.g., "National Day")
+  year        Int               // Year for quick filtering
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([year])
+  @@map("Holidays")
+}
+
+model SlaUpdateEntry {
+  id                        String   @id @default(cuid())
+  requestId                 String
+  request                   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  customerResponseDateTime  DateTime?  // When customer responded (nullable)
+  updateDateTime            DateTime   // When team provided update
+  actualUpdateFrequency     Float?     // Working hours calculated (editable override)
+  note                      String?    // Free-text note
+
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([requestId])
+  @@map("SlaUpdateEntries")
+}
+
+model SlaTarget {
+  id                    String   @id @default(cuid())
+  packageId             String
+  package               PremiumPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  priority              String   // P1, P2, P3, P4
+  ticketType            String   // INCIDENT, PROBLEM, SRO, NSRO, OTHERS, HEALTH_CHECK
+  ackTargetHours        Float    // Target hours for acknowledgement
+  responseTargetHours   Float    // Target hours for response
+  updateFreqTargetHours Float?   // Target hours for update frequency (incident/problem)
+  completionTargetHours Float?   // Target hours for service restoration/completion
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([packageId, priority, ticketType])
+  @@map("SlaTargets")
+}
+
+model SlaLine {
+  id                    String   @id @default(cuid())
+  requestId             String
+  request               ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  title                 String   // Description or title of this SLA line
+  priority              String   @default("P4") // P1, P2, P3, P4
+  ticketType            String   @default("SRO") // INCIDENT, PROBLEM, SRO, etc.
+
+  // === SLA: Acknowledgement ===
+  ticketRequestDateTime DateTime?
+  ackDateTime           DateTime?
+  actualAckTime         Float?
+  ackSlaTarget          Float?
+
+  // === SLA: Response ===
+  responseDateTime      DateTime?
+  actualResponseTime    Float?
+  responseSlaTarget     Float?
+
+  // === SLA: Update Frequency ===
+  customerResponseDateTime DateTime?
+  updateDateTime           DateTime?
+  actualUpdateFrequency    Float?
+  updateFreqSlaTarget      Float?
+  updateNote               String?
+
+  // === SLA: Completion / Final Solution ===
+  agreedFinalSolutionDateTime DateTime?
+  resolutionStatus            String?
+  completionDateTime          DateTime?
+  actualCompletionTime        Float?
+  completionSlaTarget         Float?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([requestId])
+  @@map("SlaLines")
 }

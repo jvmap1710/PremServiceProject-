@@ -36,3 +36,13 @@ next-env.d.ts
 # prisma
 /prisma/dev.db
 /prisma/dev.db-journal
+
+# user uploads
+/public/uploads
+/uploads_data
+
+# temp and test
+/scratch
+/_bmad-output
+/playwright-report
+/test-results

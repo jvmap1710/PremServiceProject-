@@ -92,14 +92,34 @@ export async function addWorkLog(
 export async function deleteWorkLog(id: string, requestId: string) {
   console.log(`DEBUG - Server Action: deleteWorkLog called for ID: ${id}, RequestID: ${requestId}`);
   const session = await auth();
+  if (!session) return { error: "Unauthorized" };
   try {
     // Fetch log details first
     const targetLog = await prisma.workLog.findUnique({
       where: { id },
-      include: { serviceRequestItem: { include: { sroRule: true } } }
+      include: { 
+        serviceRequestItem: { include: { sroRule: true } },
+        request: { select: { status: true } }
+      }
     });
 
     if (!targetLog) return { error: "Work log not found" };
+
+    const userRole = (session.user as any)?.role;
+    const isAuthor = targetLog.userId === session.user?.id;
+    const isAdmin = userRole === "ADMIN";
+    const isTAS = userRole === "TAS";
+
+    if (!isAuthor && !isAdmin && !isTAS) {
+      return { error: "You do not have permission to delete this work log" };
+    }
+
+    if (isAuthor && !isAdmin && !isTAS) {
+      const reqStatus = targetLog.request?.status;
+      if (reqStatus === "COMPLETED" || reqStatus === "CLOSED") {
+        return { error: "Cannot delete work log because the request is COMPLETED or CLOSED" };
+      }
+    }
 
     let details = "";
     if (targetLog.groupId) {
@@ -158,14 +178,34 @@ export async function updateWorkLog(
   }
 
   const session = await auth();
+  if (!session) return { error: "Unauthorized" };
 
   try {
     const oldWorkLog = await prisma.workLog.findUnique({
       where: { id },
-      include: { serviceRequestItem: { include: { sroRule: true } } }
+      include: { 
+        serviceRequestItem: { include: { sroRule: true } },
+        request: { select: { status: true } }
+      }
     });
 
     if (!oldWorkLog) return { error: "Work log not found" };
+
+    const userRole = (session.user as any)?.role;
+    const isAuthor = oldWorkLog.userId === session.user?.id;
+    const isAdmin = userRole === "ADMIN";
+    const isTAS = userRole === "TAS";
+
+    if (!isAuthor && !isAdmin && !isTAS) {
+      return { error: "You do not have permission to edit this work log" };
+    }
+
+    if (isAuthor && !isAdmin && !isTAS) {
+      const reqStatus = oldWorkLog.request?.status;
+      if (reqStatus === "COMPLETED" || reqStatus === "CLOSED") {
+        return { error: "Cannot edit work log because the request is COMPLETED or CLOSED" };
+      }
+    }
 
     const workLog = await prisma.$transaction(async (tx) => {
       const wl = await tx.workLog.update({

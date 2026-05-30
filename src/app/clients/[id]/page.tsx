@@ -21,6 +21,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
         orderBy: { validFrom: "desc" },
         include: {
           sroRules: true,
+          slaTargets: true,
         },
       },
     },

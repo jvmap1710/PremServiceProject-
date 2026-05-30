@@ -4,7 +4,8 @@ import {
   Calendar as CalendarIcon, User, Package, Tag, ArrowLeft, Clock, CheckCircle2, 
   ListChecks, Plus, Trash2, CheckSquare, Square, MessageSquare, AlertTriangle, 
   Send, UserCheck, ShieldAlert, AlignLeft, ExternalLink,
-  History, Timer, Paperclip, Upload, FileText, Image as ImageIcon, Edit2
+  History, Timer, Paperclip, Upload, FileText, Image as ImageIcon, Edit2,
+  Shield
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import Link from "next/link";
@@ -23,6 +24,7 @@ import { deleteAttachment } from "@/actions/attachment";
 import { getAuditLogs } from "@/actions/audit";
 import { toast } from "react-hot-toast";
 import { calculatePriorityMatrix, cn } from "@/lib/utils";
+import { SlaTab } from "./SlaTab";
 
 const normalizeSlaPriority = (priority: string): string => {
   const p = (priority || "").toUpperCase();
@@ -99,6 +101,8 @@ export interface ServiceRequest {
   urgency?: string | null;
   impact?: string | null;
   deadline: Date | string | null | undefined;
+  agreedFinalSolution?: Date | string | null;
+  estimatedTimeline?: Date | string | null;
   clientId: string;
   packageId: string;
   assigneeId: string | null;
@@ -114,6 +118,29 @@ export interface ServiceRequest {
   comments?: Comment[];
   workLogs?: WorkLog[];
   attachments?: Attachment[];
+  // SLA fields
+  slaLines?: SlaLineData[];
+  updateFreqTarget?: number | null;
+  escalation?: string;
+  emailSubject?: string | null;
+}
+
+export interface SlaLineData {
+  id: string;
+  title: string;
+  priority: string;
+  ticketType: string;
+  ticketRequestDateTime: Date | string | null;
+  ackDateTime: Date | string | null;
+  actualAckTime: number | null;
+  ackSlaTarget: number | null;
+  responseDateTime: Date | string | null;
+  actualResponseTime: number | null;
+  responseSlaTarget: number | null;
+  resolutionStatus: string | null;
+  completionDateTime: Date | string | null;
+  actualCompletionTime: number | null;
+  completionSlaTarget: number | null;
 }
 
 export interface Client {
@@ -184,13 +211,17 @@ export function RequestDetailView({
   const [type, setType] = useState(request.type || "TASK");
   const [priority, setPriority] = useState(normalizeSlaPriority(request.priority));
   const [deadline, setDeadline] = useState(request.deadline ? format(new Date(request.deadline), 'yyyy-MM-dd') : "");
-  const [raiseDate, setRaiseDate] = useState(request.raiseDate ? format(new Date(request.raiseDate), 'yyyy-MM-dd') : "");
+  const [raiseDate, setRaiseDate] = useState(request.raiseDate ? format(new Date(request.raiseDate), "yyyy-MM-dd'T'HH:mm") : "");
+  const [agreedFinalSolution, setAgreedFinalSolution] = useState(request.agreedFinalSolution ? format(new Date(request.agreedFinalSolution), "yyyy-MM-dd'T'HH:mm") : "");
+  const [estimatedTimeline, setEstimatedTimeline] = useState(request.estimatedTimeline ? format(new Date(request.estimatedTimeline), "yyyy-MM-dd'T'HH:mm") : "");
   const [assigneeId, setAssigneeId] = useState(request.assigneeId || "");
   const [assigneeIds, setAssigneeIds] = useState(request.assigneeIds || request.assigneeId || "");
   const [isOpenAssigneeDropdown, setIsOpenAssigneeDropdown] = useState(false);
   const [taskPriority, setTaskPriority] = useState(request.taskPriority || "MEDIUM");
   const [urgency, setUrgency] = useState(request.urgency || "");
   const [impact, setImpact] = useState(request.impact || "");
+  const [escalation, setEscalation] = useState(request.escalation || "Fujifilm business innovation vietnam support personnel");
+  const [emailSubject, setEmailSubject] = useState(request.emailSubject || "");
   
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -222,6 +253,7 @@ export function RequestDetailView({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeInfoTab, setActiveInfoTab] = useState<"DISCUSSION" | "EVIDENCE" | "AUDIT">("DISCUSSION");
+  const [mainTab, setMainTab] = useState<"DETAILS" | "SLA">("DETAILS");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
  
   // Sync state when props change (after router.refresh)
@@ -426,6 +458,8 @@ export function RequestDetailView({
       setHasChanges(true);
       return;
     }
+    if (field === "escalation") setEscalation(value);
+    if (field === "emailSubject") setEmailSubject(value);
 
     setHasChanges(true);
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -450,6 +484,8 @@ export function RequestDetailView({
     formData.append("assigneeIds", assigneeIds);
     formData.append("clientId", request.clientId);
     formData.append("packageId", request.packageId);
+    formData.append("escalation", escalation);
+    formData.append("emailSubject", emailSubject);
     formData.append("sroItems", JSON.stringify(sroItems));
     
     startTransition(async () => {
@@ -469,6 +505,8 @@ export function RequestDetailView({
           taskPriority,
           urgency,
           impact,
+          escalation,
+          emailSubject,
           deadline: deadline ? new Date(deadline) : undefined,
           raiseDate: raiseDate ? new Date(raiseDate) : new Date(request.raiseDate),
           assigneeId: assigneeId || null,
@@ -844,8 +882,8 @@ export function RequestDetailView({
                 <select disabled={isReadOnly} value={type} onChange={(e) => handleFieldChange("type", e.target.value)} className={`bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest outline-none border border-slate-100 dark:border-slate-700 transition-all ${isReadOnly ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                    <option value="INCIDENT">Incident</option>
                    <option value="PROBLEM">Problem</option>
-                   <option value="SRO">SRO</option>
-                   <option value="NSRO">NSRO</option>
+                   <option value="SRO">SR</option>
+                   <option value="NSRO">NSR</option>
                    <option value="OTHERS">Others</option>
                    <option value="HEALTH_CHECK">Health Check</option>
                 </select>
@@ -871,7 +909,36 @@ export function RequestDetailView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* 2. MAJOR TABS SWITCHER */}
+      <div className="flex bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-2xl w-fit mb-8 border border-slate-200 dark:border-slate-800">
+        <button
+          type="button"
+          onClick={() => setMainTab("DETAILS")}
+          className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2.5 ${
+            mainTab === "DETAILS"
+              ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-sm border border-slate-150 dark:border-slate-850"
+              : "text-slate-400 hover:text-slate-650"
+          }`}
+        >
+          <ListChecks className="w-4 h-4" />
+          Ticket Detail
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainTab("SLA")}
+          className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2.5 ${
+            mainTab === "SLA"
+              ? "bg-white dark:bg-slate-900 text-amber-600 shadow-sm border border-slate-150 dark:border-slate-850"
+              : "text-slate-400 hover:text-slate-655"
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+          SLA Compliance
+        </button>
+      </div>
+
+      {mainTab === "DETAILS" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* LEFT COLUMN (8/12) */}
         <div className="lg:col-span-8 space-y-8">
           {/* A. TITLE & DESCRIPTION */}
@@ -1262,7 +1329,7 @@ export function RequestDetailView({
                   )}
                 </div>
               </div>
-            )}
+             )}
           </div>
         </div>
 
@@ -1487,7 +1554,7 @@ export function RequestDetailView({
               <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
                 <CalendarIcon className="w-5 h-5 text-slate-400" />
                 <input 
-                  type="date" 
+                  type="datetime-local" 
                   value={raiseDate} 
                   onChange={(e) => handleFieldChange("raiseDate", e.target.value)} 
                   className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none w-full cursor-pointer" 
@@ -1504,6 +1571,115 @@ export function RequestDetailView({
                 </div>
               </div>
             </div>
+            
+            {/* ESCALATION */}
+            <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+              <label className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest block border-l-4 border-emerald-500 pl-3">ESCALATION</label>
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <select
+                  disabled={isReadOnly}
+                  value={escalation}
+                  onChange={(e) => handleFieldChange("escalation", e.target.value)}
+                  className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none w-full cursor-pointer"
+                >
+                  <option value="Fujifilm business innovation vietnam support personnel">Fujifilm business innovation vietnam support personnel</option>
+                  <option value="Customer technical/process support personnel">Customer technical/process support personnel</option>
+                  <option value="Major incident - situation report (sitrep) recepients">Major incident - situation report (sitrep) recepients</option>
+                  <option value="Fujifilm business innovation premium support management">Fujifilm business innovation premium support management</option>
+                  <option value="Fujifilm business innovation account management">Fujifilm business innovation account management</option>
+                </select>
+              </div>
+            </div>
+
+            {/* EMAIL SUBJECT */}
+            <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+              <label className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest block border-l-4 border-blue-500 pl-3">EMAIL SUBJECT</label>
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <input 
+                  type="text" 
+                  value={emailSubject} 
+                  onChange={(e) => handleFieldChange("emailSubject", e.target.value)} 
+                  disabled={isReadOnly}
+                  placeholder="Ticket email thread subject..."
+                  className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none w-full" 
+                />
+              </div>
+            </div>
+            
+            {/* AGREED FINAL SOLUTION DATE */}
+            <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+              <label className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest block border-l-4 border-teal-500 pl-3">AGREED FINAL SOLUTION DATE</label>
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <CalendarIcon className="w-5 h-5 text-slate-400" />
+                <input 
+                  type="datetime-local" 
+                  value={agreedFinalSolution} 
+                  onChange={(e) => handleFieldChange("agreedFinalSolution", e.target.value)} 
+                  disabled={isReadOnly}
+                  className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none w-full cursor-pointer" 
+                />
+              </div>
+            </div>
+
+            {/* ESTIMATED TIMELINE */}
+            <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+              <label className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest block border-l-4 border-orange-500 pl-3">ESTIMATED TIMELINE</label>
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <CalendarIcon className="w-5 h-5 text-slate-400" />
+                <input 
+                  type="datetime-local" 
+                  value={estimatedTimeline} 
+                  onChange={(e) => handleFieldChange("estimatedTimeline", e.target.value)} 
+                  disabled={isReadOnly}
+                  className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none w-full cursor-pointer" 
+                />
+              </div>
+            </div>
+
+            {/* COMPLETION ACTUAL & PERFORMANCE (READ ONLY) */}
+            {(() => {
+              const pSla = request.slaLines && request.slaLines.length > 0 ? request.slaLines[0] : null;
+              if (!pSla) return null;
+              
+              const actTime = pSla.actualCompletionTime;
+              const tgtTime = pSla.completionSlaTarget;
+              let statusText = "N/A";
+              let statusColor = "text-slate-400";
+              
+              if (actTime !== null && tgtTime !== null && tgtTime !== 0) {
+                 const ratio = actTime / tgtTime;
+                 if (ratio <= 1) {
+                    statusText = "✔️ ĐẠT";
+                    statusColor = "text-emerald-500";
+                 } else {
+                    statusText = "❌ KHÔNG ĐẠT";
+                    statusColor = "text-rose-500";
+                 }
+              }
+
+              return (
+                <>
+                  <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+                    <label className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest block border-l-4 border-slate-500 pl-3">ACTUAL SERVICE RESTORATION / REQUEST COMPLETION DATE</label>
+                    <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 opacity-80 cursor-not-allowed">
+                      <CalendarIcon className="w-5 h-5 text-slate-400" />
+                      <span className="text-sm font-bold text-slate-500">
+                        {pSla.completionDateTime ? format(new Date(pSla.completionDateTime), 'dd/MM/yyyy HH:mm') : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+                    <label className="text-[11px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest block border-l-4 border-slate-500 pl-3">ACTUAL SERVICE RESTORATION / REQUEST COMPLETION DATE PERFORMANCE</label>
+                    <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <span className={`text-sm font-bold ${statusColor}`}>{statusText}</span>
+                      {actTime !== null && tgtTime !== null && (
+                        <span className="text-xs text-slate-400 ml-auto font-medium">({actTime.toFixed(2)}h / {tgtTime.toFixed(2)}h target)</span>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-4 md:p-5 text-white space-y-4 shadow-xl">
@@ -1562,6 +1738,36 @@ export function RequestDetailView({
           </div>
         </div>
       </div>
+      ) : (
+        <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/30 rounded-2xl flex items-center justify-center border border-amber-100/50 dark:border-amber-900/20 shrink-0">
+              <Shield className="w-8 h-8 text-amber-600 dark:text-amber-400 animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-[11px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-800/50 shadow-sm">
+                  {request.code}
+                </span>
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight truncate">
+                  {request.title}
+                </h2>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 font-bold text-[11px] uppercase tracking-widest flex items-center gap-2">
+                SLA Performance Tracking
+                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <span className="text-slate-400 dark:text-slate-500 font-medium normal-case tracking-normal">Real-time compliance metrics</span>
+              </p>
+            </div>
+          </div>
+          <SlaTab
+            requestId={request.id}
+            slaLines={request.slaLines || []}
+            isReadOnly={isReadOnly}
+            requestData={request}
+          />
+        </div>
+      )}
 
       {/* MODALS */}
       <Modal isOpen={!!editingSubTask} onClose={() => setEditingSubTask(null)} title="EDIT TASK ITEM" maxWidth="max-w-md">

@@ -35,6 +35,12 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
           user: { select: { name: true } }
         },
         orderBy: { createdAt: "desc" }
+      },
+      slaUpdateEntries: {
+        orderBy: { createdAt: "asc" }
+      },
+      slaLines: {
+        orderBy: { createdAt: "asc" }
       }
     }
   });
@@ -42,6 +48,22 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
   if (!request) {
     notFound();
   }
+
+  // Fetch SLA target details to pass the Update Frequency target
+  const slaTarget = await prisma.slaTarget.findUnique({
+    where: {
+      packageId_priority_ticketType: {
+        packageId: request.packageId,
+        priority: request.priority,
+        ticketType: request.type,
+      }
+    }
+  });
+
+  const requestWithSla = {
+    ...request,
+    updateFreqTarget: slaTarget?.updateFreqTargetHours ?? null,
+  };
 
   // Fetch data to pass into RequestForm (Edit mode)
   const clients = await prisma.client.findMany({
@@ -67,5 +89,5 @@ export default async function RequestDetailPage({ params }: { params: Promise<{ 
     orderBy: { order: 'asc' }
   });
 
-  return <RequestDetailView request={request} clients={clients} users={users} kanbanColumns={kanbanColumns} />;
+  return <RequestDetailView request={requestWithSla as any} clients={clients} users={users} kanbanColumns={kanbanColumns} />;
 }

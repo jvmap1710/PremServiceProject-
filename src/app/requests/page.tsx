@@ -57,6 +57,9 @@ export default async function RequestsPage({
           include: {
             sroRule: true
           }
+        },
+        slaLines: {
+          orderBy: { createdAt: 'asc' }
         }
       }
     }),

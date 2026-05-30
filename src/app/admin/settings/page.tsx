@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Save, Clock, Banknote, ShieldCheck, Info, Loader2 } from "lucide-react";
+import { Settings, Save, Clock, Banknote, ShieldCheck, Info, Loader2, Calendar } from "lucide-react";
+import Link from "next/link";
 import { getFinancialSettings, updateFinancialSettings } from "@/actions/analytics";
 import { toast } from "react-hot-toast";
 
@@ -11,7 +12,10 @@ export default function GlobalSettingsPage() {
   const [settings, setSettings] = useState({
     standardMonthlyHours: 176,
     revenueMode: "PACKAGE",
-    revenuePerSroHour: 0
+    revenuePerSroHour: 0,
+    workStartTime: "08:30",
+    workEndTime: "18:00",
+    workDays: "1,2,3,4,5"
   });
 
   useEffect(() => {
@@ -21,7 +25,10 @@ export default function GlobalSettingsPage() {
         setSettings({
           standardMonthlyHours: data.standardMonthlyHours,
           revenueMode: data.revenueMode,
-          revenuePerSroHour: data.revenuePerSroHour
+          revenuePerSroHour: data.revenuePerSroHour,
+          workStartTime: (data as any).workStartTime || "08:30",
+          workEndTime: (data as any).workEndTime || "18:00",
+          workDays: (data as any).workDays || "1,2,3,4,5"
         });
       } catch (err) {
         toast.error("Unable to load system configuration");
@@ -38,7 +45,10 @@ export default function GlobalSettingsPage() {
       const result = await updateFinancialSettings({
         standardMonthlyHours: settings.standardMonthlyHours,
         revenueMode: settings.revenueMode,
-        revenuePerSroHour: settings.revenuePerSroHour
+        revenuePerSroHour: settings.revenuePerSroHour,
+        workStartTime: settings.workStartTime,
+        workEndTime: settings.workEndTime,
+        workDays: settings.workDays
       });
       if (result.success) {
         toast.success("System configuration updated");
@@ -137,6 +147,100 @@ export default function GlobalSettingsPage() {
                 />
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* SLA Working Hours Setting */}
+      <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center">
+              <Clock className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">SLA Working Hours & Days</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SLA Time Tracking Configuration</p>
+            </div>
+          </div>
+          <Link 
+            href="/admin/settings/holidays"
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-350 transition-all"
+          >
+            <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            Holiday Calendar
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Work Start Time</label>
+                <input 
+                  type="time" 
+                  value={settings.workStartTime} 
+                  onChange={(e) => setSettings({ ...settings, workStartTime: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Work End Time</label>
+                <input 
+                  type="time" 
+                  value={settings.workEndTime} 
+                  onChange={(e) => setSettings({ ...settings, workEndTime: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed italic">
+              * Specify start and end times for daily SLA calculation window (e.g., 08:30 to 18:00).
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Active Working Days</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "Sun", val: "0" },
+                { label: "Mon", val: "1" },
+                { label: "Tue", val: "2" },
+                { label: "Wed", val: "3" },
+                { label: "Thu", val: "4" },
+                { label: "Fri", val: "5" },
+                { label: "Sat", val: "6" },
+              ].map((day) => {
+                const activeDays = settings.workDays.split(",").map(d => d.trim());
+                const isActive = activeDays.includes(day.val);
+                return (
+                  <button
+                    key={day.val}
+                    type="button"
+                    onClick={() => {
+                      let newDays = [...activeDays];
+                      if (isActive) {
+                        newDays = newDays.filter(d => d !== day.val);
+                      } else {
+                        newDays.push(day.val);
+                      }
+                      newDays.sort();
+                      setSettings({ ...settings, workDays: newDays.join(",") });
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                      isActive 
+                        ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/10" 
+                        : "bg-slate-50 dark:bg-slate-950 border-slate-100 dark:border-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed italic mt-2">
+              * Selected days will be counted as working days for SLA calculations. Others will be treated as weekends and excluded.
+            </p>
           </div>
         </div>
       </div>

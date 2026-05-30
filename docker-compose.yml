@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9999:9999"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-password123}@db:5432/${POSTGRES_DB:-premservice}?schema=public
+      - AUTH_SECRET=${AUTH_SECRET:-premservice-production-secure-secret-1a2b3c4d5e6f}
+      - AUTH_URL=${AUTH_URL:-http://localhost:9999/api/auth}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:9999}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # [SECURITY FIX]: Use a Docker managed volume to ensure files are never lost
+      # even if the container is destroyed or rebuilt.
+      - uploads_data:/app/public/uploads
+    restart: always
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password123}
+      POSTGRES_DB: ${POSTGRES_DB:-premservice}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-premservice}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  uploads_data:

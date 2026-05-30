@@ -446,6 +446,9 @@ export async function getFinancialSettings() {
     standardMonthlyHours: settings?.standardMonthlyHours || 176,
     revenueMode: (settings?.revenueMode as "PACKAGE" | "SRO_HOURS") || "PACKAGE",
     revenuePerSroHour: settings?.revenuePerSroHour || 0,
+    workStartTime: settings?.workStartTime || "08:30",
+    workEndTime: settings?.workEndTime || "18:00",
+    workDays: settings?.workDays || "1,2,3,4,5",
     userSalaries
   };
 }
@@ -454,6 +457,9 @@ export async function updateFinancialSettings(data: {
   standardMonthlyHours?: number, 
   revenueMode?: string, 
   revenuePerSroHour?: number,
+  workStartTime?: string,
+  workEndTime?: string,
+  workDays?: string,
   userSalaries?: Record<string, number>
 }) {
   const session = await auth();
@@ -469,19 +475,32 @@ export async function updateFinancialSettings(data: {
     throw new Error("SRO unit price cannot be negative");
   }
 
-  if (data.standardMonthlyHours !== undefined || data.revenueMode !== undefined || data.revenuePerSroHour !== undefined) {
+  if (
+    data.standardMonthlyHours !== undefined || 
+    data.revenueMode !== undefined || 
+    data.revenuePerSroHour !== undefined ||
+    data.workStartTime !== undefined ||
+    data.workEndTime !== undefined ||
+    data.workDays !== undefined
+  ) {
     await prisma.globalSettings.upsert({
       where: { id: "system" },
       update: {
         standardMonthlyHours: data.standardMonthlyHours,
         revenueMode: data.revenueMode,
-        revenuePerSroHour: data.revenuePerSroHour
+        revenuePerSroHour: data.revenuePerSroHour,
+        workStartTime: data.workStartTime,
+        workEndTime: data.workEndTime,
+        workDays: data.workDays,
       },
       create: {
         id: "system",
         standardMonthlyHours: data.standardMonthlyHours || 176,
         revenueMode: data.revenueMode || "PACKAGE",
-        revenuePerSroHour: data.revenuePerSroHour || 0
+        revenuePerSroHour: data.revenuePerSroHour || 0,
+        workStartTime: data.workStartTime || "08:30",
+        workEndTime: data.workEndTime || "18:00",
+        workDays: data.workDays || "1,2,3,4,5",
       }
     });
   }

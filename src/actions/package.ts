@@ -4,6 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 
+const DEFAULT_SLA_TARGETS = [
+  { priority: "P1", ticketType: "INCIDENT", ackTargetHours: 0.25, responseTargetHours: 0.5, updateFreqTargetHours: 1, completionTargetHours: 4 },
+  { priority: "P2", ticketType: "INCIDENT", ackTargetHours: 0.25, responseTargetHours: 1, updateFreqTargetHours: 4, completionTargetHours: 8 },
+  { priority: "P3", ticketType: "INCIDENT", ackTargetHours: 0.25, responseTargetHours: 2, updateFreqTargetHours: 24, completionTargetHours: 48 },
+  { priority: "P4", ticketType: "INCIDENT", ackTargetHours: 0.25, responseTargetHours: 4, updateFreqTargetHours: 168, completionTargetHours: null },
+  { priority: "P4", ticketType: "SRO", ackTargetHours: 2, responseTargetHours: 4, updateFreqTargetHours: null, completionTargetHours: 24 },
+  { priority: "P4", ticketType: "NSRO", ackTargetHours: 4, responseTargetHours: 8, updateFreqTargetHours: null, completionTargetHours: null },
+];
+
 export async function createPremiumPackage(formData: FormData) {
   const session = await auth();
   if (!session || !["ADMIN", "TAS"].includes(session.user?.role || "")) {
@@ -23,7 +32,7 @@ export async function createPremiumPackage(formData: FormData) {
   }
 
   try {
-    await prisma.premiumPackage.create({
+    const newPackage = await prisma.premiumPackage.create({
       data: {
         clientId,
         name,
@@ -33,6 +42,14 @@ export async function createPremiumPackage(formData: FormData) {
         monthlyPrice,
         isActive: true, // Default active on creation
       },
+    });
+
+    // Auto-fill default SLA targets
+    await prisma.slaTarget.createMany({
+      data: DEFAULT_SLA_TARGETS.map(target => ({
+        ...target,
+        packageId: newPackage.id
+      }))
     });
 
     // After creation, sync states (deactivate older active packages if any)

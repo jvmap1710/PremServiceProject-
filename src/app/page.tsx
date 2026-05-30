@@ -39,7 +39,10 @@ export default async function DashboardPage() {
           include: {
             user: { select: { name: true } }
           },
-          orderBy: { createdAt: 'desc' }
+          orderBy: { createdAt: 'desc' },
+        },
+        slaLines: {
+          orderBy: { createdAt: 'asc' }
         }
       },
       orderBy: {
