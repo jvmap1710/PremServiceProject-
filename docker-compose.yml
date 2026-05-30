@@ -13,7 +13,6 @@ services:
       - AUTH_SECRET=${AUTH_SECRET:-premservice-production-secure-secret-1a2b3c4d5e6f}
       - AUTH_URL=${AUTH_URL:-http://localhost:9999/api/auth}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:9999}
-      - NODE_TLS_REJECT_UNAUTHORIZED=0
     depends_on:
       db:
         condition: service_healthy
