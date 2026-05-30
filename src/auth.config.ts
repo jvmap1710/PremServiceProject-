@@ -1,6 +1,9 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
+  session: {
+    maxAge: 24 * 60 * 60, // 24 hours (in seconds)
+  },
   pages: {
     signIn: "/login",
   },
