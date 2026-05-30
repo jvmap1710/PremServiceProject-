@@ -32,3 +32,13 @@
     - Cập nhật Schema Prisma (model WorkLog).
     - Tạo Server Actions xử lý thêm/xóa log time.
     - Tích hợp UI vào RequestDetailView với tính năng tính tổng giờ thực tế.
+
+## 🎯 Future Roadmap & Architectural Notes
+- **Kanban Concurrency Control (Optimistic Concurrency Control - OCC)**:
+  - **Mục tiêu**: Ngăn chặn lỗi đụng độ ghi đồng thời (Lost Update / Write-Write Conflict) khi nhiều người dùng cùng kéo thả các thẻ trên bảng Kanban tại cùng một thời điểm.
+  - **Giải pháp lựa chọn (Option 1 - OCC)**: Thiết kế giải pháp kiểm soát lạc quan siêu nhẹ và an toàn (không dùng WebSockets để tránh nặng server).
+  - **Hướng dẫn triển khai chi tiết cho phiên làm việc tiếp theo**:
+    1. **Prisma Schema**: Thêm trường `version Int @default(1)` vào model quản lý thẻ (ví dụ `Request` hoặc `Task`).
+    2. **API/Action Update**: Khi cập nhật trạng thái (drag and drop), viết câu lệnh kiểm tra `version` gửi lên từ client phải khớp với `version` hiện tại trong DB. Nếu khớp, tiến hành cập nhật trạng thái và tự động tăng `version` thêm 1 đơn vị (`version: { increment: 1 }`).
+    3. **Error Handling**: Nếu version không khớp (trả về count = 0), chặn đứng hành động, không ghi đè dữ liệu cũ, trả về lỗi `409 Conflict` và hiển thị thông báo yêu cầu người dùng Reload trang để nhận trạng thái mới nhất từ người dùng khác.
+
