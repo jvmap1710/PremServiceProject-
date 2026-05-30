@@ -49,6 +49,10 @@ services:
       - ./certs:/etc/caddy/certs
     depends_on:
       - web
+    networks:
+      default:
+        aliases:
+          - poc.cegvn.com
 
 volumes:
   postgres_data:
