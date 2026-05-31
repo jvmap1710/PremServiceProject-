@@ -3,7 +3,8 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat openssl
+RUN sed -i 's/https/http/g' /etc/apk/repositories && \
+    apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
