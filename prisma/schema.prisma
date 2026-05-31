@@ -112,6 +112,7 @@ model ServiceRequest {
   userRequirement String?        // Yêu cầu từ phía khách hàng (Nghiệp vụ)
   description    String         // Mô tả kỹ thuật chi tiết (Technical)
   status         String    @default("TODO") // TODO, IN_PROGRESS, DONE
+  version        Int       @default(1)
   type           String    @default("TASK") // TASK, BUG, FEATURE, URGENT
   priority       String    @default("P4") // P1, P2, P3, P4
   taskPriority   String?   @default("MEDIUM") // HIGH, MEDIUM, LOW

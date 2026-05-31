@@ -123,6 +123,7 @@ export interface ServiceRequest {
   updateFreqTarget?: number | null;
   escalation?: string;
   emailSubject?: string | null;
+  version?: number;
 }
 
 export interface SlaLineData {
@@ -532,12 +533,14 @@ export function RequestDetailView({
     if (newStatus === request.status) return;
     
     startTransition(async () => {
-      const result = await updateRequestStatus(request.id, newStatus);
+      const currentVersion = request.version || 1;
+      const result = await updateRequestStatus(request.id, newStatus, currentVersion);
       if (result?.error) {
         toast.error(result.error);
       } else {
         toast.success("Status updated successfully");
-        onSaved?.({ ...request, status: newStatus });
+        const nextVersion = (result as any)?.version || (currentVersion + 1);
+        onSaved?.({ ...request, status: newStatus, version: nextVersion });
         router.refresh();
       }
     });

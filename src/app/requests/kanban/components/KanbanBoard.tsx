@@ -282,11 +282,16 @@ export function KanbanBoard({
     }
 
     if (dragOriginalStatus.current !== null && dragOriginalStatus.current !== nextStatus) {
-      const result = await updateRequestStatus(activeId, nextStatus);
+      const activeReq = requests.find(r => r.id === activeId);
+      const currentVersion = activeReq?.version || 1;
+
+      const result = await updateRequestStatus(activeId, nextStatus, currentVersion);
       if (result?.error) {
         setRequests(prev => prev.map(r => r.id === activeId ? { ...r, status: dragOriginalStatus.current! } : r));
         toast.error(result.error);
       } else {
+        const nextVersion = (result as any)?.version || (currentVersion + 1);
+        setRequests(prev => prev.map(r => r.id === activeId ? { ...r, status: nextStatus, version: nextVersion } : r));
         toast.success("Status updated successfully");
       }
     }

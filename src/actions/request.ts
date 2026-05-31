@@ -598,7 +598,7 @@ export async function updateServiceRequest(id: string, formData: FormData) {
   }
 }
 
-export async function updateRequestStatus(id: string, status: string) {
+export async function updateRequestStatus(id: string, status: string, version: number) {
   try {
     const session = await auth();
     if (!session) return { error: "You need to log in" };
@@ -612,6 +612,14 @@ export async function updateRequestStatus(id: string, status: string) {
     });
 
     if (!currentRequest) return { error: "Request does not exist" };
+
+    // OCC Check: Verify that the version from client matches the database version
+    if (currentRequest.version !== version) {
+      return { 
+        error: "Yêu cầu đã được cập nhật bởi một người dùng khác. Vui lòng tải lại trang để xem trạng thái mới nhất.", 
+        code: "CONFLICT" 
+      };
+    }
 
     if (status === "DONE") {
       const isAssignee = currentRequest.assigneeId === session.user?.id ||
@@ -650,20 +658,25 @@ export async function updateRequestStatus(id: string, status: string) {
     const oldLabel = statusLabels[currentRequest.status] || currentRequest.status;
     const newLabel = statusLabels[status] || status;
 
-    await prisma.$transaction([
-      prisma.serviceRequest.update({
-        where: { id },
-        data: { status }
-      }),
-      prisma.auditLog.create({
+    await prisma.$transaction(async (tx) => {
+      const updateResult = await tx.serviceRequest.updateMany({
+        where: { id, version },
+        data: { status, version: { increment: 1 } }
+      });
+
+      if (updateResult.count === 0) {
+        throw new Error("CONFLICT");
+      }
+
+      await tx.auditLog.create({
         data: {
           requestId: id,
-          userId: session.user?.id,
+          userId: session.user?.id || null,
           action: "UPDATE_STATUS",
           details: `Quick status change from "${oldLabel}" to "${newLabel}"`
         }
-      })
-    ]);
+      });
+    });
 
     // Notify relevant users for ANY status change
     const req = await prisma.serviceRequest.findUnique({ 
@@ -741,8 +754,14 @@ export async function updateRequestStatus(id: string, status: string) {
     revalidatePath("/");
     revalidatePath(`/requests/${id}`);
     
-    return { success: true };
+    return { success: true, version: version + 1 };
   } catch (error: any) {
+    if (error.message === "CONFLICT") {
+      return { 
+        error: "Yêu cầu đã được cập nhật bởi một người dùng khác. Vui lòng tải lại trang để xem trạng thái mới nhất.", 
+        code: "CONFLICT" 
+      };
+    }
     console.error("Failed to update status:", error);
     return { error: error.message };
   }
