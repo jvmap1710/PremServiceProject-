@@ -1,4 +1,5 @@
 FROM node:20-alpine AS base
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 
 # Install dependencies only when needed
 FROM base AS deps
