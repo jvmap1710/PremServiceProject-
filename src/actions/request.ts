@@ -599,6 +599,11 @@ export async function updateServiceRequest(id: string, formData: FormData) {
 }
 
 export async function updateRequestStatus(id: string, status: string, version: number) {
+  const ALLOWED_STATUSES = ["TODO", "IN_PROGRESS", "DONE", "PAUSED", "CLOSED"];
+  if (!status || !ALLOWED_STATUSES.includes(status.toUpperCase())) {
+    return { error: "Trạng thái không hợp lệ" };
+  }
+
   try {
     const session = await auth();
     if (!session) return { error: "You need to log in" };
