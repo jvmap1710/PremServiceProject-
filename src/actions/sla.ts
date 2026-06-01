@@ -235,6 +235,70 @@ export async function deleteSlaLine(lineId: string, requestId: string) {
 }
 
 /**
+ * Recalculate actualUpdateFrequency for all SLA Update Entries of a request.
+ * Follows the formula:
+ * 1. If customerResponseDateTime is NOT null/empty, Freq Actual = updateDateTime - customerResponseDateTime (working hours)
+ * 2. If customerResponseDateTime is null/empty, Freq Actual = updateDateTime - previous entry's updateDateTime (working hours)
+ *    If it is the first entry and customerResponseDateTime is empty, Freq Actual = updateDateTime - ticketRequestDateTime / raiseDate
+ */
+export async function recalculateAllUpdateFrequencies(requestId: string) {
+  try {
+    // 1. Fetch all update entries in chronological order (createdAt: "asc")
+    const entries = await prisma.slaUpdateEntry.findMany({
+      where: { requestId },
+      orderBy: { createdAt: "asc" },
+    });
+
+    // 2. Fetch the request to get raiseDate as fallback base time
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id: requestId },
+      select: { raiseDate: true },
+    });
+    const fallbackBaseDT = request?.raiseDate || new Date();
+
+    // 3. Fetch first SLA line's ticketRequestDateTime as first-priority fallback base time
+    const firstLine = await prisma.slaLine.findFirst({
+      where: { requestId },
+      orderBy: { createdAt: "asc" },
+      select: { ticketRequestDateTime: true },
+    });
+    const firstBaseDT = firstLine?.ticketRequestDateTime || fallbackBaseDT;
+
+    // 4. Iterate and recalculate
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const custRespDT = entry.customerResponseDateTime;
+      const updateDT = entry.updateDateTime;
+
+      let actualFreq: number | null = null;
+      if (custRespDT) {
+        // 1. nếu customer dt not empty thì lấy team update - customer dt
+        actualFreq = await calculateWorkingHours(custRespDT, updateDT);
+      } else {
+        // 2. nếu customer dt empty thì lấy teamupdate - teamupdate liền kề (cột trên).
+        if (i > 0) {
+          const prevEntry = entries[i - 1];
+          actualFreq = await calculateWorkingHours(prevEntry.updateDateTime, updateDT);
+        } else {
+          // First entry, no customer response: use firstBaseDT
+          actualFreq = await calculateWorkingHours(firstBaseDT, updateDT);
+        }
+      }
+
+      // Update in database if it changed
+      if (entry.actualUpdateFrequency !== actualFreq) {
+        await prisma.slaUpdateEntry.update({
+          where: { id: entry.id },
+          data: { actualUpdateFrequency: actualFreq },
+        });
+      }
+    }
+  } catch (error) {
+    console.error("recalculateAllUpdateFrequencies error:", error);
+  }
+}
+
+/**
  * Add a new SLA Update Entry (Update Frequency row).
  */
 export async function addSlaUpdateEntry(
@@ -252,45 +316,18 @@ export async function addSlaUpdateEntry(
       : null;
     const updateDT = new Date(data.updateDateTime);
 
-    // Auto-calculate if not manually provided
-    let actualFreq = data.actualUpdateFrequency ?? null;
-
-    if (actualFreq === null) {
-      // Get the first SLA line for reference
-      const firstLine = await prisma.slaLine.findFirst({
-        where: { requestId },
-        orderBy: { createdAt: "asc" },
-        select: { ticketRequestDateTime: true },
-      });
-
-      // Get previous entries to calculate TH1 vs TH2
-      const prevEntries = await prisma.slaUpdateEntry.findMany({
-        where: { requestId },
-        orderBy: { createdAt: "asc" },
-      });
-
-      if (custRespDT) {
-        // TH2: Actual = updateDateTime - customerResponseDateTime (working hours)
-        actualFreq = await calculateWorkingHours(custRespDT, updateDT);
-      } else if (prevEntries.length > 0) {
-        // TH1: Actual = previous entry's updateDateTime - current updateDateTime
-        const lastEntry = prevEntries[prevEntries.length - 1];
-        actualFreq = await calculateWorkingHours(lastEntry.updateDateTime, updateDT);
-      } else if (firstLine?.ticketRequestDateTime) {
-        // First entry, no customer response: use first SLA line's ticketRequestDateTime as base
-        actualFreq = await calculateWorkingHours(firstLine.ticketRequestDateTime, updateDT);
-      }
-    }
-
     const entry = await prisma.slaUpdateEntry.create({
       data: {
         requestId,
         customerResponseDateTime: custRespDT,
         updateDateTime: updateDT,
-        actualUpdateFrequency: actualFreq,
+        actualUpdateFrequency: data.actualUpdateFrequency ?? null,
         note: data.note || null,
       },
     });
+
+    // Automatically recalculate all update frequencies for absolute consistency
+    await recalculateAllUpdateFrequencies(requestId);
 
     revalidatePath(`/requests/${requestId}`);
     return { success: true, entry };
@@ -336,6 +373,9 @@ export async function updateSlaUpdateEntry(
       data: updateData,
     });
 
+    // Recalculate to update the frequency and all subsequent entries
+    await recalculateAllUpdateFrequencies(requestId);
+
     revalidatePath(`/requests/${requestId}`);
     return { success: true };
   } catch (error: any) {
@@ -350,6 +390,10 @@ export async function updateSlaUpdateEntry(
 export async function deleteSlaUpdateEntry(entryId: string, requestId: string) {
   try {
     await prisma.slaUpdateEntry.delete({ where: { id: entryId } });
+
+    // Recalculate to shift dependencies and ensure exact correctness
+    await recalculateAllUpdateFrequencies(requestId);
+
     revalidatePath(`/requests/${requestId}`);
     return { success: true };
   } catch (error: any) {
@@ -359,7 +403,7 @@ export async function deleteSlaUpdateEntry(entryId: string, requestId: string) {
 }
 
 /**
- * Recalculate all SLA working hours for a request.
+ * Recalculate all SLA working hours and update frequencies for a request.
  * Called when working hours config or holidays change.
  */
 export async function recalculateSlaForRequest(requestId: string) {
@@ -398,6 +442,9 @@ export async function recalculateSlaForRequest(requestId: string) {
         });
       }
     }
+
+    // Also recalculate all update frequency rows sequentially
+    await recalculateAllUpdateFrequencies(requestId);
 
     revalidatePath(`/requests/${requestId}`);
     revalidatePath(`/requests/kanban`);
