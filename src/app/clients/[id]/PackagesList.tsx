@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Calendar, Clock, ShieldCheck, ChevronDown, ChevronUp, SlidersHorizontal, Package, ArrowUpDown, Plus, Trash2, Save, Target } from "lucide-react";
+import { Calendar, Clock, ShieldCheck, ChevronDown, ChevronUp, SlidersHorizontal, Package, ArrowUpDown, Plus, Trash2, Save, Target, Pencil } from "lucide-react";
 import { PackageForm } from "./PackageForm";
 import { RuleForm } from "./RuleForm";
 import { DeleteRuleButton } from "./DeleteRuleButton";
@@ -381,6 +381,18 @@ function SlaTargetsManager({
     });
   };
 
+  const handleEdit = (t: SlaTarget) => {
+    setNewTarget({
+      priority: t.priority,
+      ticketType: t.ticketType,
+      ackTargetHours: String(t.ackTargetHours),
+      responseTargetHours: String(t.responseTargetHours),
+      updateFreqTargetHours: t.updateFreqTargetHours !== null ? String(t.updateFreqTargetHours) : "",
+      completionTargetHours: t.completionTargetHours !== null ? String(t.completionTargetHours) : ""
+    });
+    toast.success(`Loaded SLA target for ${t.priority} - ${t.ticketType}. Edit and save below.`);
+  };
+
   return (
     <div className="space-y-6 mt-8">
       <div className="flex items-center justify-between gap-4">
@@ -426,7 +438,14 @@ function SlaTargetsManager({
                   <td className="py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400">
                     {t.completionTargetHours !== null ? `${t.completionTargetHours}h` : <span className="text-slate-300 dark:text-slate-700">—</span>}
                   </td>
-                  <td className="py-2.5 text-right pr-4">
+                  <td className="py-2.5 text-right pr-4 flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => handleEdit(t)}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 rounded-lg transition-all"
+                      title="Edit target"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       onClick={() => handleDelete(t.id)}
                       disabled={isPending}
