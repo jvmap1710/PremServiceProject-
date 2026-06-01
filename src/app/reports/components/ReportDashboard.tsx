@@ -10,6 +10,7 @@ import { ExportButton } from "./ExportButton";
 import { SROPerformanceTable } from "./SROPerformanceTable";
 import { SROUsageTable } from "./SROUsageTable";
 import { FinancialAnalysis } from "./FinancialAnalysis";
+import { SlaPerformanceReport } from "./SlaPerformanceReport";
 
 export function ReportDashboard({ clients, users, userRole }: { clients: any[], users: any[], userRole?: string }) {
   const [selectedClientId, setSelectedClientId] = useState<string>("all");
@@ -97,16 +98,16 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
     fetchData();
   }, [selectedClientId, yearStart, yearEnd, periodType, periodValueStart, periodValueEnd, customStart, customEnd]);
 
-  const [activeTab, setActiveTab] = useState<"OVERVIEW" | "COMPARISON" | "OPTIMIZATION" | "FINANCIAL" | "REMIX">("OVERVIEW");
+  const [activeTab, setActiveTab] = useState<"OVERVIEW" | "COMPARISON" | "OPTIMIZATION" | "FINANCIAL" | "REMIX" | "SLA">("OVERVIEW");
 
   useEffect(() => {
     const savedTab = localStorage.getItem("report_active_tab");
-    if (savedTab && ["OVERVIEW", "COMPARISON", "OPTIMIZATION", "FINANCIAL", "REMIX"].includes(savedTab)) {
+    if (savedTab && ["OVERVIEW", "COMPARISON", "OPTIMIZATION", "FINANCIAL", "REMIX", "SLA"].includes(savedTab)) {
       setActiveTab(savedTab as any);
     }
   }, []);
 
-  const handleTabChange = (tab: "OVERVIEW" | "COMPARISON" | "OPTIMIZATION" | "FINANCIAL" | "REMIX") => {
+  const handleTabChange = (tab: "OVERVIEW" | "COMPARISON" | "OPTIMIZATION" | "FINANCIAL" | "REMIX" | "SLA") => {
     setActiveTab(tab);
     localStorage.setItem("report_active_tab", tab);
   };
@@ -172,6 +173,16 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
           }`}
         >
           COMPARISON
+        </button>
+        <button
+          onClick={() => handleTabChange("SLA")}
+          className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
+            activeTab === "SLA" 
+            ? "bg-white dark:bg-slate-900 text-blue-600 shadow-sm" 
+            : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          SLA PERFORMANCE 📈
         </button>
         <button
           onClick={() => handleTabChange("OPTIMIZATION")}
@@ -302,6 +313,8 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
                 <SROUsageTable data={data.current.sroUsageAnalysis} />
               </div>
             </div>
+          ) : activeTab === "SLA" ? (
+            <SlaPerformanceReport data={data} />
           ) : activeTab === "FINANCIAL" ? (
             <FinancialAnalysis 
               data={data.current} 

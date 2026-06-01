@@ -185,7 +185,8 @@ async function fetchStats(filter: any, start: Date, end: Date, clientId: string)
       },
       items: {
         include: { sroRule: true }
-      }
+      },
+      slaLines: true
     },
   });
 
