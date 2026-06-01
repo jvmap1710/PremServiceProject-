@@ -341,14 +341,14 @@ export function SlaPerformanceReport({ data }: SlaPerformanceReportProps) {
                 {viewMode === "HOURS" ? (
                   // === HOURS VIEW: 6 Lines (Target dashed, Actual solid) ===
                   [
-                    { key: "ackTarget", name: "Ack Target (Hours)", stroke: "#ef4444", dash: "5 5" },
-                    { key: "ackActual", name: "Ack Actual (Hours)", stroke: "#ef4444", dash: "0" },
+                    { key: "ackTarget", name: "Ack Target (Hours)", stroke: "#fca5a5", dash: "4 4" },
+                    { key: "ackActual", name: "Ack Actual (Hours)", stroke: "#dc2626", dash: "0" },
                     
-                    { key: "responseTarget", name: "Response Target (Hours)", stroke: "#f59e0b", dash: "5 5" },
-                    { key: "responseActual", name: "Response Actual (Hours)", stroke: "#f59e0b", dash: "0" },
+                    { key: "responseTarget", name: "Response Target (Hours)", stroke: "#fdba74", dash: "4 4" },
+                    { key: "responseActual", name: "Response Actual (Hours)", stroke: "#d97706", dash: "0" },
                     
-                    { key: "restorationTarget", name: "Restoration Target (Hours)", stroke: "#8b5cf6", dash: "5 5" },
-                    { key: "restorationActual", name: "Restoration Actual (Hours)", stroke: "#8b5cf6", dash: "0" }
+                    { key: "restorationTarget", name: "Restoration Target (Hours)", stroke: "#c084fc", dash: "4 4" },
+                    { key: "restorationActual", name: "Restoration Actual (Hours)", stroke: "#6d28d9", dash: "0" }
                   ].map((lineConfig) => (
                     <Line
                       key={lineConfig.key}
@@ -366,9 +366,9 @@ export function SlaPerformanceReport({ data }: SlaPerformanceReportProps) {
                 ) : (
                   // === PERCENTAGE VIEW: 3 Lines mapped to Right Axis ===
                   [
-                    { key: "ackPerf", name: "Ack Performance (%)", stroke: "#ef4444" },
-                    { key: "respPerf", name: "Response Performance (%)", stroke: "#f59e0b" },
-                    { key: "restPerf", name: "Restoration Performance (%)", stroke: "#8b5cf6" }
+                    { key: "ackPerf", name: "Ack Performance (%)", stroke: "#dc2626" },
+                    { key: "respPerf", name: "Response Performance (%)", stroke: "#d97706" },
+                    { key: "restPerf", name: "Restoration Performance (%)", stroke: "#6d28d9" }
                   ].map((lineConfig) => (
                     <Line
                       key={lineConfig.key}
