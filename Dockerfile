@@ -1,4 +1,4 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 
 # Install dependencies only when needed
@@ -10,7 +10,7 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
-RUN npm ci
+RUN npm ci --loglevel=error --no-audit --no-fund
 
 # Rebuild the source code only when needed
 FROM base AS builder
