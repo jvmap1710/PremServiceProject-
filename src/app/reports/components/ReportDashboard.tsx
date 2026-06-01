@@ -31,6 +31,12 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
     packageRevenue: 0
   });
 
+  const formatDate = (date: any) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return d.toLocaleDateString("en-GB"); // Format as DD/MM/YYYY
+  };
+
   useEffect(() => {
     async function loadSettings() {
       const settings = await getFinancialSettings();
@@ -152,8 +158,17 @@ export function ReportDashboard({ clients, users, userRole }: { clients: any[], 
         />
       </div>
 
+      {/* Global Timeframe Badge */}
+      {data?.period?.start && data?.period?.end && (
+        <div className="flex animate-in fade-in duration-300">
+          <div className="inline-flex flex-wrap items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-wider border border-indigo-100 dark:border-indigo-900/30 shadow-xs">
+            <span>📅</span> Timeframe: {data.period.label} ({formatDate(data.period.start)} - {formatDate(data.period.end)})
+          </div>
+        </div>
+      )}
+
       {/* Tab Switcher */}
-      <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 w-fit rounded-2xl">
+      <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 w-full md:w-fit overflow-x-auto rounded-2xl whitespace-nowrap scrollbar-none">
         <button
           onClick={() => handleTabChange("OVERVIEW")}
           className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${

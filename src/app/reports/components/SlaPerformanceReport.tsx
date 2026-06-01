@@ -199,11 +199,6 @@ export function SlaPerformanceReport({ data }: SlaPerformanceReportProps) {
         <div>
           <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">SLA Performance Dashboard</h3>
           <p className="text-xs text-slate-500 font-medium">Visualization of Acknowledgement, Response, and Service Restoration targets vs actuals</p>
-          {data?.period?.start && data?.period?.end && (
-            <div className="mt-2.5 inline-flex flex-wrap items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border border-indigo-100 dark:border-indigo-900/30 shadow-xs">
-              <span>📅</span> FY Timeframe: {data.period.label} ({formatDate(data.period.start)} - {formatDate(data.period.end)})
-            </div>
-          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
